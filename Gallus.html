@@ -1,0 +1,3241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b0a09">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="description" content="GALLUS — a single-player fowl sport. Tend the coop, condition a bird, fight a bout, pay for it.">
+<title>GALLUS — The Spur Circuit</title>
+
+<!-- ============ CSS LIBRARY IMPORTS ============ -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700&family=Oswald:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@4.1.1/animate.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css">
+
+<style>
+/* ============================================================
+   GALLUS — single file. All game CSS below.
+   Design language: documentary broadcast overlay.
+   Palette is carried by the arena, not the bird.
+   ============================================================ */
+:root{
+  --ink:#0b0a09; --ink-2:#12100e; --ink-3:#1a1714; --ink-4:#241f1a;
+  --bone:#ece4d4; --bone-2:#b9ae99; --bone-3:#8a8070;
+  --laterite:#a3411f; --rust:#7d3a1c; --amber:#f2a71b; --amber-2:#c9860c;
+  --jade:#4f7a5c; --slate:#5b6570; --blood:#8e2b1c;
+  --line:rgba(236,228,212,.14);
+  --line-2:rgba(236,228,212,.28);
+  --disp:'Bebas Neue',Impact,'Haettenschweiler',sans-serif;
+  --cond:'Oswald','Inter',system-ui,sans-serif;
+  --ui:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,'SF Mono',Menlo,monospace;
+  --pad:clamp(12px,2.4vw,28px);
+  --r:2px;
+  --shadow:0 18px 44px rgba(0,0,0,.55);
+  --ease:cubic-bezier(.2,.8,.2,1);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;background:var(--ink);color:var(--bone);font-family:var(--ui);
+  overscroll-behavior:none;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body{overflow:hidden;position:fixed;inset:0;touch-action:none}
+button{font-family:inherit;color:inherit;background:none;border:0;cursor:pointer}
+::selection{background:var(--amber);color:var(--ink)}
+canvas{display:block}
+
+/* ---------- grain + vignette over everything ---------- */
+#grain{position:fixed;inset:0;pointer-events:none;z-index:9000;opacity:.055;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/></filter><rect width='140' height='140' filter='url(%23n)'/></svg>")}
+#vig{position:fixed;inset:0;pointer-events:none;z-index:8000;
+  box-shadow:inset 0 0 min(13vw,170px) min(2vw,26px) rgba(0,0,0,.5)}
+#flash{position:fixed;inset:0;pointer-events:none;z-index:8500;background:#fff;opacity:0;transition:opacity .09s linear}
+
+/* ---------- app shell ---------- */
+#app{position:fixed;inset:0;display:flex;flex-direction:column;overflow:hidden}
+.screen{position:absolute;inset:0;display:none;flex-direction:column;overflow:hidden}
+.screen.on{display:flex}
+.scroll{overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;touch-action:pan-y;flex:1;
+  scrollbar-width:thin;scrollbar-color:var(--line-2) transparent}
+.scroll::-webkit-scrollbar{width:8px}
+.scroll::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:8px}
+
+/* ---------- type ---------- */
+h1,h2,h3,h4{margin:0;font-family:var(--disp);font-weight:400;letter-spacing:.02em;line-height:.92}
+.kicker{font-family:var(--mono);font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:var(--bone-3)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.dim{color:var(--bone-3)}
+.hr{height:1px;background:var(--line);margin:14px 0}
+
+/* ---------- buttons ---------- */
+.btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:9px;
+  padding:12px 20px;font-family:var(--cond);font-weight:500;font-size:13px;letter-spacing:.16em;text-transform:uppercase;
+  border:1px solid var(--line-2);color:var(--bone);background:rgba(236,228,212,.03);
+  transition:background .16s var(--ease),border-color .16s var(--ease),transform .12s var(--ease),color .16s;user-select:none}
+.btn:hover{background:rgba(236,228,212,.09);border-color:var(--bone-2)}
+.btn:active{transform:translateY(1px) scale(.99)}
+.btn[disabled]{opacity:.32;pointer-events:none}
+.btn.solid{background:var(--bone);color:var(--ink);border-color:var(--bone);font-weight:600}
+.btn.solid:hover{background:#fff}
+.btn.amber{background:var(--amber);color:#170f02;border-color:var(--amber);font-weight:600}
+.btn.amber:hover{background:#ffc23d}
+.btn.ghost{background:transparent;border-color:var(--line)}
+.btn.danger{border-color:rgba(142,43,28,.8);color:#e8a89c}
+.btn.danger:hover{background:rgba(142,43,28,.22)}
+.btn.sm{padding:8px 13px;font-size:11px;letter-spacing:.12em}
+.btn.wide{width:100%}
+.btn .fa-solid,.btn .fa-regular{font-size:12px;opacity:.85}
+
+/* ---------- top bar ---------- */
+.bar{display:flex;align-items:center;gap:14px;padding:calc(10px + env(safe-area-inset-top)) var(--pad) 10px;
+  border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(11,10,9,.96),rgba(11,10,9,.7));
+  backdrop-filter:blur(8px);z-index:20;flex-shrink:0}
+.bar .brand{font-family:var(--disp);font-size:24px;letter-spacing:.14em;line-height:1}
+.bar .brand span{color:var(--amber)}
+.bar .sub{font-family:var(--mono);font-size:9px;letter-spacing:.22em;color:var(--bone-3);text-transform:uppercase}
+.bar .spacer{flex:1}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border:1px solid var(--line);
+  font-family:var(--mono);font-size:11px;letter-spacing:.06em;background:rgba(0,0,0,.3)}
+.chip b{color:var(--amber);font-weight:600}
+.iconbtn{min-width:34px;height:34px;padding:0 9px;display:inline-grid;place-items:center;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;border:1px solid var(--line);color:var(--bone-2);
+  transition:.16s}
+.iconbtn:hover{color:var(--bone);border-color:var(--bone-2);background:rgba(236,228,212,.06)}
+
+/* ============================================================
+   TITLE
+   ============================================================ */
+#scr-title{justify-content:flex-end;background:#0b0a09}
+#titleCv{position:absolute;inset:0;width:100%;height:100%}
+.title-wrap{position:relative;z-index:5;padding:var(--pad) var(--pad) calc(var(--pad) + env(safe-area-inset-bottom));
+  display:flex;flex-direction:column;gap:18px;width:100%;max-width:1400px;margin:0 auto}
+.logo{font-family:var(--disp);font-size:clamp(64px,16vw,168px);line-height:.78;letter-spacing:.06em;
+  text-shadow:0 10px 60px rgba(0,0,0,.9)}
+.logo em{font-style:normal;color:var(--amber)}
+.tag{font-family:var(--cond);font-weight:300;font-size:clamp(13px,1.6vw,17px);letter-spacing:.34em;
+  text-transform:uppercase;color:var(--bone-2)}
+.title-menu{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
+.title-meta{display:flex;flex-wrap:wrap;gap:8px 26px;font-family:var(--mono);font-size:9.5px;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--bone-3);border-top:1px solid var(--line);padding-top:14px}
+
+/* ============================================================
+   GENERIC PANEL / CARD
+   ============================================================ */
+.panel{border:1px solid var(--line);background:linear-gradient(180deg,rgba(26,23,20,.9),rgba(18,16,14,.9));
+  padding:16px 18px;position:relative}
+.panel h3{font-size:22px;letter-spacing:.08em}
+.panel-hd{display:flex;align-items:baseline;gap:10px;margin-bottom:10px}
+.grid{display:grid;gap:12px}
+.station{border:1px solid var(--line);background:rgba(236,228,212,.02);padding:14px;display:flex;flex-direction:column;
+  gap:9px;transition:.18s var(--ease);position:relative;overflow:hidden}
+.station:hover{border-color:var(--line-2);background:rgba(236,228,212,.05);transform:translateY(-2px)}
+.station .st-ico{font-size:16px;color:var(--amber);opacity:.9}
+.station h4{font-size:19px;letter-spacing:.09em}
+.station p{margin:0;font-size:11.5px;line-height:1.5;color:var(--bone-3);font-weight:300}
+.station .st-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}
+.station .lvl{position:absolute;top:12px;right:12px;font-family:var(--mono);font-size:9px;letter-spacing:.14em;
+  color:var(--bone-3);border:1px solid var(--line);padding:2px 6px}
+
+/* ---------- meters ---------- */
+.meter{height:5px;background:rgba(236,228,212,.1);position:relative;overflow:hidden}
+.meter i{position:absolute;inset:0 100% 0 0;background:var(--bone-2);transition:right .4s var(--ease)}
+.meter.jade i{background:var(--jade)} .meter.blue i{background:#5d84a8} .meter.amber i{background:var(--amber)}
+.mrow{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--bone-3)}
+.mrow .lbl{width:52px;text-transform:uppercase;flex-shrink:0}
+.mrow .meter{flex:1}
+.mrow .val{width:30px;text-align:right;color:var(--bone-2)}
+
+/* ============================================================
+   COOP
+   ============================================================ */
+#scr-coop .body{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:var(--pad);
+  padding:var(--pad);flex:1;min-height:0}
+@media (max-width:1000px){
+  #scr-coop .body{display:block;overflow-y:auto;padding-bottom:calc(var(--pad) + env(safe-area-inset-bottom))}
+  #scr-coop .col{display:block;min-height:auto}
+  #scr-coop .col>.panel{margin-bottom:12px;min-height:0!important}
+  #birdList{max-height:320px;overflow-y:auto}
+  #stationGrid{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
+}
+.col{display:flex;flex-direction:column;gap:12px;min-height:0}
+.col .scroll{padding-right:4px}
+.bird-card{border:1px solid var(--line);padding:14px;display:flex;gap:14px;align-items:center;cursor:pointer;
+  transition:.18s var(--ease);background:rgba(236,228,212,.015)}
+.bird-card:hover{border-color:var(--line-2);background:rgba(236,228,212,.05)}
+.bird-card.sel{border-color:var(--amber);background:rgba(242,167,27,.07)}
+.bird-card .av{width:54px;height:54px;flex-shrink:0;border:1px solid var(--line);display:grid;place-items:center;
+  background:radial-gradient(circle at 50% 40%,rgba(242,167,27,.14),transparent 70%)}
+.bird-card .nm{font-family:var(--cond);font-size:17px;letter-spacing:.09em;line-height:1.1}
+.bird-card .br{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--bone-3);margin-top:3px}
+.bird-card .stg{font-family:var(--mono);font-size:9px;letter-spacing:.16em;color:var(--amber);text-transform:uppercase}
+.tagline{display:flex;gap:6px;flex-wrap:wrap}
+.pill{font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;padding:3px 7px;
+  border:1px solid var(--line);color:var(--bone-3)}
+.pill.on{color:var(--ink);background:var(--bone-2);border-color:var(--bone-2)}
+.pill.amber{color:#1a1205;background:var(--amber);border-color:var(--amber)}
+
+/* ============================================================
+   CIRCUIT
+   ============================================================ */
+.arena-card{position:relative;border:1px solid var(--line);padding:18px;min-height:150px;display:flex;
+  flex-direction:column;justify-content:flex-end;gap:6px;overflow:hidden;cursor:pointer;transition:.2s var(--ease)}
+.arena-card .swatch{position:absolute;inset:0;z-index:0;opacity:.9}
+.arena-card .veil{position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(11,10,9,0) 0%,rgba(11,10,9,.55) 45%,rgba(11,10,9,.93) 78%)}
+.arena-card>*{position:relative;z-index:2}
+.arena-card:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+.arena-card.locked{filter:grayscale(1) brightness(.5);cursor:not-allowed}
+.arena-card.locked:hover{transform:none;box-shadow:none}
+.arena-card h4{font-size:26px;letter-spacing:.06em}
+.arena-card .place{font-family:var(--mono);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:rgba(236,228,212,.65)}
+.arena-card .rule{font-size:11px;color:rgba(236,228,212,.78);font-weight:300;line-height:1.45}
+.arena-card .no{position:absolute;top:12px;right:14px;z-index:3;font-family:var(--disp);font-size:40px;color:rgba(236,228,212,.18);line-height:1}
+
+/* ============================================================
+   PRE-FIGHT
+   ============================================================ */
+#scr-prefight .body{padding:var(--pad);display:grid;grid-template-columns:1fr 1fr;gap:var(--pad);flex:1;min-height:0}
+@media (max-width:900px){
+  #scr-prefight .body{display:block;overflow-y:auto}
+  #scr-prefight .col{display:block;min-height:auto}
+  #scr-prefight .col>.panel{margin-bottom:12px;min-height:0!important;flex:none!important}
+}
+.vs{display:flex;align-items:center;gap:10px;justify-content:center;font-family:var(--disp);font-size:32px;color:var(--bone-3)}
+.corner-item{border:1px solid var(--line);padding:9px 11px;font-size:11px;cursor:pointer;transition:.15s;
+  display:flex;justify-content:space-between;gap:8px;align-items:center}
+.corner-item:hover{border-color:var(--line-2);background:rgba(236,228,212,.05)}
+.corner-item.sel{border-color:var(--amber);background:rgba(242,167,27,.1)}
+
+/* ============================================================
+   BOUT
+   ============================================================ */
+#scr-bout{background:#000}
+#boutStage{position:absolute;inset:0}
+#boutCv{width:100%;height:100%}
+#hud{position:absolute;inset:0;pointer-events:none;z-index:10;display:flex;flex-direction:column;
+  padding:calc(10px + env(safe-area-inset-top)) var(--pad) 0}
+.hud-top{display:flex;align-items:flex-start;gap:clamp(10px,2vw,28px)}
+.fighter-hud{flex:1;min-width:0}
+.fighter-hud.right{text-align:right}
+.fh-name{font-family:var(--cond);font-size:clamp(13px,1.7vw,18px);letter-spacing:.14em;text-transform:uppercase;
+  line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fh-sub{font-family:var(--mono);font-size:8.5px;letter-spacing:.18em;color:var(--bone-3);text-transform:uppercase;margin-top:2px}
+.vit{height:14px;margin-top:6px;background:rgba(0,0,0,.62);border:1px solid rgba(236,228,212,.3);position:relative;
+  overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.6)}
+.vit .trail{position:absolute;inset:0;background:rgba(236,228,212,.72);transform-origin:left;transition:transform .28s .22s ease-out}
+.vit .fill{position:absolute;inset:0;background:linear-gradient(180deg,#e9e0cd,#b9a884);transform-origin:left}
+.vit.low .fill{background:linear-gradient(180deg,#d4623f,#8e2b1c)}
+.fighter-hud.right .vit .fill,.fighter-hud.right .vit .trail{transform-origin:right}
+.cond{display:flex;gap:5px;margin-top:6px}
+.fighter-hud.right .cond{justify-content:flex-end}
+.pip{width:22px;height:4px;background:rgba(236,228,212,.16);position:relative;overflow:hidden}
+.pip i{position:absolute;inset:0 100% 0 0;background:var(--jade);transition:right .3s}
+.pip.w i{background:#5d84a8} .pip.r i{background:var(--amber)}
+.pip.crit i{background:var(--blood)}
+.hud-mid{width:clamp(74px,10vw,120px);text-align:center;flex-shrink:0}
+.clock{font-family:var(--mono);font-size:clamp(24px,4.4vw,40px);font-weight:600;line-height:.9;
+  text-shadow:0 3px 18px rgba(0,0,0,.9);font-variant-numeric:tabular-nums}
+.rounds{display:flex;gap:4px;justify-content:center;margin-top:5px}
+.rounds b{width:11px;height:3px;background:rgba(236,228,212,.2);display:block}
+.rounds b.won{background:var(--amber)}
+.surge-wrap{display:flex;align-items:center;gap:7px;margin-top:8px}
+.surge-crest{width:34px;height:26px;position:relative;display:grid;place-items:center;
+  border:1px solid rgba(236,228,212,.25);background:rgba(0,0,0,.5)}
+.surge-crest svg{width:22px;height:16px}
+.surge-crest .fillc{fill:rgba(236,228,212,.14);transition:fill .2s}
+.surge-crest.ready{border-color:var(--amber);box-shadow:0 0 16px rgba(242,167,27,.45)}
+.surge-crest.ready .fillc{fill:var(--amber)}
+.surge-crest.on{border-color:#fff;background:var(--amber);animation:surgepulse .5s infinite alternate}
+.surge-crest.on .fillc{fill:#1a1205}
+@keyframes surgepulse{to{box-shadow:0 0 26px rgba(242,167,27,.9)}}
+.streak{display:flex;gap:3px}
+.streak i{width:7px;height:7px;background:rgba(236,228,212,.18);display:block;transform:rotate(45deg)}
+.streak i.on{background:var(--amber)}
+
+/* centre announcements */
+#announce{position:absolute;inset:0;display:grid;place-items:center;z-index:14;pointer-events:none}
+#announce .txt{font-family:var(--disp);font-size:clamp(48px,13vw,150px);letter-spacing:.08em;line-height:.85;
+  text-align:center;color:var(--bone);text-shadow:0 12px 70px rgba(0,0,0,.95);opacity:0;transform:scale(1.14)}
+#announce .txt.show{animation:annIn .5s var(--ease) forwards}
+#announce .txt.hide{animation:annOut .34s ease-in forwards}
+@keyframes annIn{from{opacity:0;transform:scale(1.14) translateY(8px);filter:blur(8px)}
+  to{opacity:1;transform:scale(1) translateY(0);filter:blur(0)}}
+@keyframes annOut{to{opacity:0;transform:scale(.96);filter:blur(6px)}}
+
+/* cull overlay */
+#cullOv{position:absolute;inset:0;z-index:16;display:none;flex-direction:column;justify-content:center;
+  align-items:center;gap:14px;background:#000;text-align:center;padding:var(--pad)}
+#cullOv.on{display:flex}
+#cullOv .c1{font-family:var(--mono);font-size:10px;letter-spacing:.4em;text-transform:uppercase;color:var(--blood)}
+#cullOv .c2{font-family:var(--disp);font-size:clamp(40px,11vw,110px);letter-spacing:.1em;line-height:.9}
+#cullOv .c3{max-width:46ch;font-size:13px;line-height:1.6;color:var(--bone-2);font-weight:300}
+#cullOv .c4{font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--bone-3);text-transform:uppercase}
+
+/* touch controls */
+#touch{position:absolute;inset:0;z-index:12;display:none;pointer-events:none}
+#touch.on{display:block}
+.tbtn{position:absolute;pointer-events:auto;display:grid;place-items:center;font-family:var(--cond);
+  font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:rgba(236,228,212,.9);
+  border:1px solid rgba(236,228,212,.26);background:rgba(11,10,9,.42);backdrop-filter:blur(3px);
+  border-radius:50%;user-select:none;transition:background .08s,transform .08s;touch-action:none}
+.tbtn.hit{background:rgba(242,167,27,.55);transform:scale(.94)}
+.tbtn.big{width:78px;height:78px;font-size:13px}
+.tbtn.mid{width:62px;height:62px}
+.tbtn.sm2{width:52px;height:52px;font-size:10px}
+#tc-move{left:16px;bottom:calc(20px + env(safe-area-inset-bottom));display:flex;gap:10px;position:absolute;pointer-events:none}
+#tc-move .tbtn{position:relative}
+#tc-atk{right:16px;bottom:calc(20px + env(safe-area-inset-bottom));position:absolute;width:200px;height:200px;pointer-events:none}
+#tc-atk .tbtn{position:absolute}
+@media (max-width:900px),(pointer:coarse){
+  .hide-touch{display:none!important}
+}
+
+/* ============================================================
+   MODALS
+   ============================================================ */
+.modal{position:fixed;inset:0;z-index:9500;display:none;align-items:center;justify-content:center;padding:var(--pad);
+  background:rgba(6,5,4,.82);backdrop-filter:blur(6px)}
+.modal.on{display:flex}
+.sheet{width:min(760px,100%);max-height:86vh;display:flex;flex-direction:column;border:1px solid var(--line-2);
+  background:linear-gradient(180deg,#171412,#0e0c0a);box-shadow:var(--shadow);animation:sheetIn .3s var(--ease)}
+@keyframes sheetIn{from{opacity:0;transform:translateY(14px) scale(.99)}to{opacity:1;transform:none}}
+.sheet-hd{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line);flex-shrink:0}
+.sheet-hd h3{font-size:24px;letter-spacing:.09em;flex:1}
+.sheet-bd{padding:16px 18px;overflow-y:auto;touch-action:pan-y}
+.sheet-ft{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:10px;justify-content:flex-end;flex-shrink:0}
+
+.note{border:1px solid var(--line);padding:13px 15px;margin-bottom:9px;background:rgba(236,228,212,.02)}
+.note .nh{display:flex;justify-content:space-between;gap:10px;font-family:var(--mono);font-size:9px;
+  letter-spacing:.18em;text-transform:uppercase;color:var(--bone-3);margin-bottom:6px}
+.note .nt{font-family:var(--cond);font-size:15px;letter-spacing:.07em;margin-bottom:4px}
+.note .nb{font-size:12px;line-height:1.62;color:var(--bone-2);font-weight:300}
+.note.locked{opacity:.34;filter:blur(.4px)}
+.note.locked .nb{filter:blur(3px)}
+
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.row .rl{font-size:12.5px;color:var(--bone-2)}
+.row .rr{font-family:var(--mono);font-size:11px;color:var(--bone)}
+.switch{width:42px;height:22px;border:1px solid var(--line-2);position:relative;cursor:pointer;flex-shrink:0;
+  transition:.2s;background:rgba(0,0,0,.4)}
+.switch i{position:absolute;top:2px;left:2px;width:16px;height:16px;background:var(--bone-3);transition:.2s var(--ease)}
+.switch.on{border-color:var(--amber);background:rgba(242,167,27,.22)}
+.switch.on i{left:22px;background:var(--amber)}
+input[type=range]{-webkit-appearance:none;appearance:none;width:120px;height:2px;background:var(--line-2);outline:0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;background:var(--amber);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:12px;height:12px;background:var(--amber);border:0;cursor:pointer}
+
+/* toast */
+#toast{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom));transform:translate(-50%,20px);
+  z-index:9600;padding:10px 18px;border:1px solid var(--line-2);background:rgba(12,10,9,.95);
+  font-family:var(--mono);font-size:11px;letter-spacing:.1em;opacity:0;pointer-events:none;transition:.28s var(--ease);
+  max-width:min(90vw,520px);text-align:center}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* rotate hint */
+#rotate{position:fixed;inset:0;z-index:9800;display:none;place-items:center;background:#0b0a09;text-align:center;padding:24px}
+#rotate.on{display:grid}
+
+/* small screens */
+@media (max-width:720px){
+  .hide-sm{display:none!important}
+  .bar{gap:8px;flex-wrap:wrap;padding-top:calc(8px + env(safe-area-inset-top))}
+  .bar .brand{font-size:19px}
+  .bar .sub{font-size:8px}
+  .chip{padding:5px 8px;font-size:10px}
+  .iconbtn{height:30px;font-size:9px;padding:0 7px}
+  .fh-name{font-size:12px;letter-spacing:.08em}
+  .fh-sub{display:none}
+  .vit{height:11px}
+  .clock{font-size:22px}
+  #hud{padding-left:8px;padding-right:8px}
+  .hud-top{gap:8px}
+}
+/* reduced motion */
+body.rm *{animation-duration:.001s!important;transition-duration:.001s!important}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01s!important;transition-duration:.01s!important}}
+</style>
+</head>
+<body>
+<div id="grain"></div>
+<div id="vig"></div>
+<div id="flash"></div>
+
+<div id="app">
+
+  <!-- ================= TITLE ================= -->
+  <section id="scr-title" class="screen on">
+    <canvas id="titleCv"></canvas>
+    <div class="title-wrap">
+      <div class="kicker">The Spur Circuit &nbsp;/&nbsp; single-player fowl sport</div>
+      <div class="logo animate__animated animate__fadeInDown animate__fast">GALL<em>U</em>S</div>
+      <div class="tag animate__animated animate__fadeIn animate__delay-1s">Tend. Condition. Fight. Pay for it.</div>
+      <div class="title-menu animate__animated animate__fadeInUp animate__faster">
+        <button class="btn amber" id="btnContinue"><i class="fa-solid fa-play"></i> Continue</button>
+        <button class="btn" id="btnNew"><i class="fa-solid fa-egg"></i> New Circuit</button>
+        <button class="btn ghost" id="btnSettingsTitle"><i class="fa-solid fa-sliders"></i> Settings</button>
+        <button class="btn ghost" id="btnCredits"><i class="fa-solid fa-book"></i> Rules Board</button>
+      </div>
+      <div class="title-meta">
+        <span>v0.1 vertical slice</span>
+        <span>60 Hz fixed tick</span>
+        <span id="titleSave">no circuit saved</span>
+        <span>16+ · impact and loss, no gore</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= COOP ================= -->
+  <section id="scr-coop" class="screen">
+    <div class="bar">
+      <div>
+        <div class="brand">COOP<span>.</span></div>
+        <div class="sub" id="coopSub">Pens · silo · med bay</div>
+      </div>
+      <div class="spacer"></div>
+      <div class="chip"><i class="fa-solid fa-coins" style="color:var(--amber)"></i> <b id="coinVal">0</b></div>
+      <div class="chip hide-sm"><i class="fa-solid fa-wheat-awn"></i> feed <b id="feedVal">0</b></div>
+      <div class="chip hide-sm"><i class="fa-solid fa-droplet"></i> water <b id="waterVal">0</b></div>
+      <button class="iconbtn" id="btnRoster" title="Roster">Roster</button>
+      <button class="iconbtn" id="btnCircuit" title="Circuit">Circuit</button>
+      <button class="iconbtn" id="btnSettingsCoop" title="Settings">Setup</button>
+    </div>
+    <div class="body">
+      <div class="col">
+        <div class="panel" style="flex-shrink:0">
+          <div class="panel-hd">
+            <h3 id="selName">—</h3>
+            <span class="pill amber" id="selStage">—</span>
+            <div class="spacer" style="flex:1"></div>
+            <span class="mono dim" style="font-size:10px" id="selBreed">—</span>
+          </div>
+          <div class="tagline" id="selTags" style="margin-bottom:12px"></div>
+          <div style="display:flex;flex-direction:column;gap:7px">
+            <div class="mrow"><span class="lbl">Food</span><div class="meter jade"><i id="mFood"></i></div><span class="val" id="vFood">0</span></div>
+            <div class="mrow"><span class="lbl">Water</span><div class="meter blue"><i id="mWater"></i></div><span class="val" id="vWater">0</span></div>
+            <div class="mrow"><span class="lbl">Rest</span><div class="meter amber"><i id="mRest"></i></div><span class="val" id="vRest">0</span></div>
+          </div>
+          <div class="hr"></div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;font-family:var(--mono);font-size:10px">
+            <div><div class="dim" style="font-size:8.5px;letter-spacing:.16em">POWER</div><div id="sPow" style="font-size:15px">—</div></div>
+            <div><div class="dim" style="font-size:8.5px;letter-spacing:.16em">REACH</div><div id="sRea" style="font-size:15px">—</div></div>
+            <div><div class="dim" style="font-size:8.5px;letter-spacing:.16em">AGILITY</div><div id="sAgi" style="font-size:15px">—</div></div>
+            <div><div class="dim" style="font-size:8.5px;letter-spacing:.16em">CONST</div><div id="sCon" style="font-size:15px">—</div></div>
+          </div>
+          <div class="hr"></div>
+          <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;letter-spacing:.1em;margin-bottom:6px">
+            <span class="dim">GROWTH — lower meter wins</span><span id="growthTxt" class="dim">—</span>
+          </div>
+          <div class="mrow"><span class="lbl">Feed</span><div class="meter"><i id="mGrowF"></i></div><span class="val" id="vGrowF"></span></div>
+          <div class="mrow" style="margin-top:6px"><span class="lbl">Score</span><div class="meter"><i id="mGrowS"></i></div><span class="val" id="vGrowS"></span></div>
+          <div class="st-row" style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+            <button class="btn sm solid" id="btnFeed"><i class="fa-solid fa-wheat-awn"></i> Feed</button>
+            <button class="btn sm" id="btnWater"><i class="fa-solid fa-droplet"></i> Water</button>
+            <button class="btn sm" id="btnRest"><i class="fa-solid fa-moon"></i> Rest in pen</button>
+            <button class="btn sm" id="btnMed"><i class="fa-solid fa-kit-medical"></i> Med bay</button>
+            <button class="btn sm" id="btnTrain"><i class="fa-solid fa-dumbbell"></i> Train</button>
+            <button class="btn sm amber" id="btnToCircuit"><i class="fa-solid fa-map"></i> To the circuit</button>
+          </div>
+        </div>
+        <div class="panel" style="flex:1;min-height:0;display:flex;flex-direction:column">
+          <div class="panel-hd"><h3>Your poultry</h3><span class="kicker" id="flockCount">0 birds</span></div>
+          <div class="scroll" id="birdList" style="display:flex;flex-direction:column;gap:8px"></div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="scroll" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;align-content:start" id="stationGrid"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= ROSTER ================= -->
+  <section id="scr-roster" class="screen">
+    <div class="bar">
+      <button class="iconbtn" id="btnBackRoster">&larr;</button>
+      <div><div class="brand">ROSTER</div><div class="sub">Every bird, stage, loadout, lineage</div></div>
+      <div class="spacer"></div>
+      <div class="chip"><i class="fa-solid fa-trophy" style="color:var(--amber)"></i> <b id="rosterWins">0</b> wins</div>
+    </div>
+    <div class="scroll" style="padding:var(--pad)">
+      <div id="rosterBody" class="grid" style="grid-template-columns:repeat(auto-fill,minmax(280px,1fr))"></div>
+      <div class="hr"></div>
+      <div class="panel-hd"><h3>Trophy wall</h3><span class="kicker">lineage of every bird you have lost</span></div>
+      <div id="trophyBody" class="grid" style="grid-template-columns:repeat(auto-fill,minmax(230px,1fr))"></div>
+    </div>
+  </section>
+
+  <!-- ================= CIRCUIT ================= -->
+  <section id="scr-circuit" class="screen">
+    <div class="bar">
+      <button class="iconbtn" id="btnBackCircuit">&larr;</button>
+      <div><div class="brand">CIRCUIT</div><div class="sub" id="circSub">Six arenas, one rule each</div></div>
+      <div class="spacer"></div>
+      <button class="btn sm ghost" id="btnNotes"><i class="fa-solid fa-file-lines"></i> Field notes <b id="noteCount" style="color:var(--amber);margin-left:4px">0/40</b></button>
+    </div>
+    <div class="scroll" style="padding:var(--pad)">
+      <div class="grid" id="arenaGrid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr))"></div>
+      <div class="hr"></div>
+      <p class="dim" style="font-size:11.5px;line-height:1.6;max-width:70ch;font-weight:300">
+        Six arenas open in order, and each one adds a rule rather than only a tougher opponent.
+        A bad Cull is recoverable by grinding an earlier tier with a new bird, not by save-scumming.
+      </p>
+    </div>
+  </section>
+
+  <!-- ================= PRE-FIGHT ================= -->
+  <section id="scr-prefight" class="screen">
+    <div class="bar">
+      <button class="iconbtn" id="btnBackPrefight">&larr;</button>
+      <div><div class="brand" id="pfArena">BOUT</div><div class="sub" id="pfRule">—</div></div>
+      <div class="spacer"></div>
+      <button class="btn sm ghost" id="btnToggleRank"><i class="fa-solid fa-shield-halved"></i> <span id="rankTxt">RANKED</span></button>
+    </div>
+    <div class="body">
+      <div class="col">
+        <div class="panel">
+          <div class="panel-hd"><h3>Pre-fight card</h3></div>
+          <div id="pfCard"></div>
+          <div id="pfWarning" style="margin-top:12px;padding:11px;border:1px solid rgba(142,43,28,.55);
+            background:rgba(142,43,28,.12);font-size:11px;line-height:1.55;color:#e8b3a6;display:none"></div>
+        </div>
+        <div class="panel" style="flex:1;min-height:0;display:flex;flex-direction:column">
+          <div class="panel-hd"><h3>Condition forecast</h3></div>
+          <div id="pfForecast" style="font-family:var(--mono);font-size:10.5px;line-height:1.9"></div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="panel">
+          <div class="panel-hd"><h3>Corner bag</h3><span class="kicker">one item per round</span></div>
+          <div id="cornerBag" style="display:flex;flex-direction:column;gap:6px"></div>
+        </div>
+        <div class="panel" style="flex:1;min-height:0">
+          <div class="panel-hd"><h3>Rules board</h3></div>
+          <div id="pfRules" style="font-size:11.5px;line-height:1.7;color:var(--bone-2);font-weight:300"></div>
+        </div>
+        <button class="btn amber wide" id="btnFightNow" style="padding:18px;font-size:16px"><i class="fa-solid fa-feather-pointed"></i> Walk to the ring</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= BOUT ================= -->
+  <section id="scr-bout" class="screen">
+    <div id="boutStage"><canvas id="boutCv"></canvas></div>
+    <div id="hud">
+      <div class="hud-top">
+        <div class="fighter-hud">
+          <div class="fh-name" id="hpName">—</div>
+          <div class="fh-sub" id="hpSub">—</div>
+          <div class="vit" id="vitP"><div class="trail"></div><div class="fill"></div></div>
+          <div class="cond">
+            <div class="pip" id="pipF"><i></i></div><div class="pip w" id="pipW"><i></i></div><div class="pip r" id="pipR"><i></i></div>
+          </div>
+          <div class="surge-wrap">
+            <div class="surge-crest" id="surgeIcon">
+              <svg viewBox="0 0 24 16"><path class="fillc" d="M1 13 L5 5 L8 9 L12 1 L16 9 L19 5 L23 13 Z"/></svg>
+            </div>
+            <div class="streak" id="streakP"><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+        </div>
+        <div class="hud-mid">
+          <div class="clock" id="clock">45</div>
+          <div class="rounds" id="roundPips"><b></b><b></b><b></b></div>
+        </div>
+        <div class="fighter-hud right">
+          <div class="fh-name" id="hoName">—</div>
+          <div class="fh-sub" id="hoSub">—</div>
+          <div class="vit" id="vitO"><div class="trail"></div><div class="fill"></div></div>
+          <div class="cond">
+            <div class="pip" id="pipOF"><i></i></div><div class="pip w" id="pipOW"><i></i></div><div class="pip r" id="pipOR"><i></i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="announce"><div class="txt" id="annTxt"></div></div>
+    <div id="cullOv">
+      <div class="c1">ranked bout · the cull</div>
+      <div class="c2" id="cullTitle">THE CULL</div>
+      <div class="c3" id="cullBody"></div>
+      <div class="c4" id="cullFoot">a legacy egg remains in the incubator</div>
+      <button class="btn ghost sm" id="btnCullAck" style="margin-top:8px">Continue</button>
+    </div>
+
+    <div id="touch">
+      <div id="tc-move">
+        <div class="tbtn mid" data-act="left" style="font-size:20px">&lsaquo;</div>
+        <div class="tbtn mid" data-act="right" style="font-size:20px">&rsaquo;</div>
+      </div>
+      <div id="tc-atk">
+        <div class="tbtn big" data-act="peck" style="right:120px;bottom:66px">Peck</div>
+        <div class="tbtn big" data-act="wing" style="right:44px;bottom:132px">Wing</div>
+        <div class="tbtn mid" data-act="talon" style="right:26px;bottom:58px">Talon</div>
+        <div class="tbtn sm2" data-act="spur" style="right:132px;bottom:150px">Spur</div>
+        <div class="tbtn sm2" data-act="guard" style="right:150px;bottom:6px">Guard</div>
+        <div class="tbtn sm2" data-act="sidestep" style="right:76px;bottom:0px">S-Step</div>
+        <div class="tbtn sm2" data-act="clinch" style="right:8px;bottom:126px">Clinch</div>
+        <div class="tbtn sm2" data-act="surge" style="right:0px;bottom:0px;border-color:var(--amber);color:var(--amber)">Surge</div>
+      </div>
+    </div>
+
+    <div style="position:absolute;top:calc(10px + env(safe-area-inset-top));right:8px;z-index:15">
+      <button class="iconbtn" id="btnPause" style="width:30px;height:30px;opacity:.45;font-size:11px">II</button>
+    </div>
+  </section>
+
+  <!-- ================= RESOLVE ================= -->
+  <section id="scr-resolve" class="screen">
+    <div class="scroll" style="padding:var(--pad);display:flex;align-items:center;justify-content:center">
+      <div style="width:min(760px,100%)">
+        <div class="kicker" id="rsKicker">bout resolved</div>
+        <h1 id="rsTitle" style="font-size:clamp(46px,10vw,92px);margin:6px 0 4px">WIN</h1>
+        <div class="tag" id="rsSub" style="margin-bottom:22px">—</div>
+        <div class="panel">
+          <div class="panel-hd"><h3>What the bout cost</h3></div>
+          <div id="rsCost" style="font-family:var(--mono);font-size:11.5px;line-height:2"></div>
+        </div>
+        <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:12px">
+          <div class="panel"><div class="kicker">survival score</div><h2 id="rsScore" style="font-size:38px;margin-top:6px">—</h2></div>
+          <div class="panel"><div class="kicker">coin</div><h2 id="rsCoin" style="font-size:38px;margin-top:6px;color:var(--amber)">—</h2></div>
+        </div>
+        <div id="rsNotes" style="margin-top:12px"></div>
+        <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap">
+          <button class="btn solid" id="btnRsCoop"><i class="fa-solid fa-house"></i> Back to the coop</button>
+          <button class="btn ghost" id="btnRsAgain"><i class="fa-solid fa-rotate-right"></i> Re-run this arena</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- ================= MODALS ================= -->
+<div class="modal" id="mSettings">
+  <div class="sheet">
+    <div class="sheet-hd"><h3>Settings</h3><button class="iconbtn" data-close="mSettings">&times;</button></div>
+    <div class="sheet-bd" id="settingsBody"></div>
+    <div class="sheet-ft"><button class="btn ghost sm" id="btnWipe"><i class="fa-solid fa-trash"></i> Erase circuit</button><button class="btn solid sm" data-close="mSettings">Done</button></div>
+  </div>
+</div>
+
+<div class="modal" id="mNotes">
+  <div class="sheet">
+    <div class="sheet-hd"><h3>Field notes</h3><span class="mono dim" style="font-size:10px" id="notesCount2">0 / 40</span><button class="iconbtn" data-close="mNotes">&times;</button></div>
+    <div class="sheet-bd" id="notesBody"></div>
+  </div>
+</div>
+
+<div class="modal" id="mCredits">
+  <div class="sheet">
+    <div class="sheet-hd"><h3>Rules board</h3><button class="iconbtn" data-close="mCredits">&times;</button></div>
+    <div class="sheet-bd" id="creditsBody"></div>
+    <div class="sheet-ft"><button class="btn solid sm" data-close="mCredits">Understood</button></div>
+  </div>
+</div>
+
+<div class="modal" id="mPause">
+  <div class="sheet" style="width:min(420px,100%)">
+    <div class="sheet-hd"><h3>Paused</h3></div>
+    <div class="sheet-bd" style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn solid wide" id="btnResume">Resume</button>
+      <button class="btn ghost wide" id="btnPauseSettings">Accessibility &amp; settings</button>
+      <button class="btn ghost wide" id="btnForfeit">Forfeit the bout</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="mHatch">
+  <div class="sheet" style="width:min(520px,100%)">
+    <div class="sheet-hd"><h3 id="hatchTitle">Egg</h3></div>
+    <div class="sheet-bd" id="hatchBody"></div>
+    <div class="sheet-ft"><button class="btn solid sm" data-close="mHatch">Keep</button></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<div id="rotate"><div><h2 style="font-size:34px;margin-bottom:10px">Turn the device</h2>
+  <p class="dim" style="font-size:12px">Gallus fights on a wide mat. Landscape, please.</p></div></div>
+<script>
+/* ============================================================================
+   GALLUS — The Spur Circuit
+   A single-file, multiplatform, offline-first fowl sport.
+   Combat: 60 Hz fixed tick, frame data from the design document.
+   Spectacle is cosmetic: no feather, particle or camera shake touches a hitbox.
+   ========================================================================== */
+(function(){
+'use strict';
+
+/* ---------------------------------------------------------------------------
+   0. TINY UTILITIES
+   ------------------------------------------------------------------------ */
+const $  = (s,r)=> (r||document).querySelector(s);
+const $$ = (s,r)=> Array.from((r||document).querySelectorAll(s));
+const clamp=(v,a,b)=> v<a?a:v>b?b:v;
+const lerp=(a,b,t)=> a+(b-a)*t;
+const rnd=(a=1,b=0)=> b+Math.random()*(a-b);
+const ri=(a,b)=> Math.floor(rnd(b+1,a));
+const pick=a=> a[Math.floor(Math.random()*a.length)];
+const fmt=n=> Math.round(n).toLocaleString('en-IN');
+const TAU=Math.PI*2;
+
+function el(tag,cls,html){ const e=document.createElement(tag); if(cls)e.className=cls; if(html!=null)e.innerHTML=html; return e; }
+function on(e,ev,fn,opt){ e.addEventListener(ev,fn,opt||{passive:false}); }
+function show(id){ $('#'+id).classList.add('on'); }
+function hide(id){ $('#'+id).classList.remove('on'); }
+let toastT=0;
+function toast(msg){
+  const t=$('#toast'); t.textContent=msg; t.classList.add('on');
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('on'),2100);
+}
+function flashScreen(a){
+  if(!S.opts.flash) return;
+  const f=$('#flash'); f.style.opacity=String(a); setTimeout(()=>{f.style.opacity='0';},70);
+}
+
+/* ---------------------------------------------------------------------------
+   1. DATA — the design document, made loadable
+   ------------------------------------------------------------------------ */
+
+const BREEDS=[
+ {id:'aseel',  n:'Aseel',        o:'India',   kg:2.5, cls:'Light',  arch:'Striker',    pow:9, rea:6, agi:5, con:9,
+  hook:'Hard feather, upright, 2,000 years of selection for exactly this',
+  pal:{body:'#7d3d22',wing:'#5e2c17',hackle:'#c8813e',comb:'#a8312a',beak:'#c8a45c',leg:'#a0764a'}},
+ {id:'shamo',  n:'Shamo',        o:'Japan',   kg:5.0, cls:'Heavy',  arch:'Reach',      pow:9, rea:10,agi:3, con:8,
+  hook:'Tallest stance in the game; long neck, heavy legs, slow recovery',
+  pal:{body:'#2b2420',wing:'#1d1815',hackle:'#b5652e',comb:'#9e2a24',beak:'#b9a06a',leg:'#8a7250'}},
+ {id:'cornish',n:'Cornish',      o:'England', kg:4.8, cls:'Heavy',  arch:'Bruiser',    pow:10,rea:5, agi:3, con:10,
+  hook:'Widest body, short legs; highest armour, lowest evasion',
+  pal:{body:'#ddd2bd',wing:'#c4b89f',hackle:'#efe6d3',comb:'#b03a2e',beak:'#d0b070',leg:'#c8a878'}},
+ {id:'oeg',    n:'Old English',  o:'England', kg:2.3, cls:'Light',  arch:'Skirmisher', pow:6, rea:6, agi:9, con:5,
+  hook:'Closest to wild jungle fowl; fastest sidestep, thin health',
+  pal:{body:'#4a3728',wing:'#33261b',hackle:'#d09b4e',comb:'#a83028',beak:'#b89a60',leg:'#8d6c44'}},
+ {id:'mgame',  n:'Modern Game',  o:'England', kg:2.7, cls:'Medium', arch:'Reach',      pow:6, rea:9, agi:7, con:6,
+  hook:'Long legs and neck; best poke range, worst clinch',
+  pal:{body:'#6d4a33',wing:'#503322',hackle:'#c98b4a',comb:'#ab2f26',beak:'#c2a464',leg:'#a67c4c'}},
+ {id:'cochin', n:'Cochin',       o:'China',   kg:5.0, cls:'Heavy',  arch:'Bruiser',    pow:8, rea:4, agi:2, con:10,
+  hook:'Feathered legs absorb low hits; slowest walk in the roster',
+  pal:{body:'#c99a63',wing:'#a97c4a',hackle:'#e0b87e',comb:'#a83428',beak:'#c8a05c',leg:'#c9a06a'}},
+ {id:'crevec', n:'Crevecoeur',   o:'France',  kg:3.6, cls:'Medium', arch:'Striker',    pow:8, rea:6, agi:5, con:7,
+  hook:'Crest blocks its own vision; strong beak, poor guard reads',
+  pal:{body:'#22201d',wing:'#161412',hackle:'#3a3530',comb:'#8e2620',beak:'#b89a62',leg:'#7a6852'}},
+ {id:'andal',  n:'Andalusian',   o:'Spain',   kg:3.2, cls:'Medium', arch:'Skirmisher', pow:6, rea:6, agi:7, con:7,
+  hook:'Balanced speed and reach; no standout, no weakness',
+  pal:{body:'#69717f',wing:'#4c5460',hackle:'#98a1ad',comb:'#ad342a',beak:'#bfa268',leg:'#8a8c92'}},
+ {id:'ancona', n:'Ancona',       o:'Italy',   kg:2.7, cls:'Medium', arch:'Skirmisher', pow:6, rea:6, agi:8, con:6,
+  hook:'High activity; cheapest to condition, lowest ceiling',
+  pal:{body:'#2a2724',wing:'#1b1917',hackle:'#e6dfd0',comb:'#a83028',beak:'#c3a468',leg:'#9a8a72'}},
+ {id:'delaware',n:'Delaware',    o:'United States', kg:3.9, cls:'Heavy', arch:'Bruiser', pow:8, rea:6, agi:4, con:9,
+  hook:'Fast growth: reaches adult on 15 percent less feed',
+  pal:{body:'#e2dbcc',wing:'#cfc6b3',hackle:'#f2ecdf',comb:'#b23a2c',beak:'#d2b472',leg:'#c8a878'}},
+ {id:'wfbs',   n:'White-faced Black', o:'Spain', kg:3.6, cls:'Medium', arch:'Reach',   pow:7, rea:9, agi:5, con:6,
+  hook:'Noisy; telegraphs its own attacks, gains a feint',
+  pal:{body:'#1e1c1a',wing:'#141312',hackle:'#302c28',comb:'#96281f',beak:'#bda063',leg:'#6f6250'}},
+ {id:'sebright',n:'Sebright',    o:'England', kg:0.62,cls:'Bantam', arch:'Skirmisher', pow:3, rea:4, agi:10,con:3,
+  hook:'Tiny, fragile, fastest in the game; four-hit combos',
+  pal:{body:'#a8763c',wing:'#8a5c2c',hackle:'#d8b06a',comb:'#ab2f26',beak:'#c8a868',leg:'#a88658'}},
+];
+const BREED=Object.fromEntries(BREEDS.map(b=>[b.id,b]));
+
+const CLASSES=['Bantam','Light','Medium','Heavy'];
+
+/* Frame data — Table 9. Ticks at 60 Hz. */
+const MOVES={
+  peck:  {id:'peck',  n:'Peck',        su:4,  ac:2, rc:7,  hs:12, bs:8,  dmg:4,  reach:1.02, kind:'light', stop:60,  fe:2,  down:40,  hit:'light' },
+  wing:  {id:'wing',  n:'Wing buffet', su:9,  ac:3, rc:14, hs:18, bs:12, dmg:11, reach:1.16, kind:'mid',   stop:90,  fe:4,  down:80,  hit:'medium'},
+  talon: {id:'talon', n:'Talon rake',  su:13, ac:4, rc:20, hs:24, bs:16, dmg:16, reach:1.28, kind:'heavy', stop:125, fe:8,  down:140, hit:'heavy' },
+  spur:  {id:'spur',  n:'Spur',        su:16, ac:3, rc:26, hs:20, bs:0,  dmg:9,  reach:1.22, kind:'heavy', stop:150, fe:10, down:160, hit:'crush', crush:true },
+  clinch:{id:'clinch',n:'Clinch',      su:7,  ac:2, rc:18, hs:0,  bs:0,  dmg:8,  reach:0.74, kind:'throw', stop:100, fe:3,  down:60,  hit:'throw' },
+  side:  {id:'side',  n:'Sidestep',    su:3,  ac:8, rc:6,  hs:0,  bs:0,  dmg:0,  reach:0,    kind:'move',  stop:0,   fe:0,  down:0,   hit:'none'  },
+};
+
+/* Condition bands — Table 6. */
+const BANDS=[
+  {min:85,f:1.00,lbl:'Full output',note:'no tells'},
+  {min:70,f:0.94,lbl:'Quiet loss',note:'nothing visible'},
+  {min:50,f:0.85,lbl:'Slightly slow',note:'slower heavy startup'},
+  {min:30,f:0.72,lbl:'Panting',note:'guard drops 2 ticks later'},
+  {min:10,f:0.55,lbl:'Wobble',note:'hitstun taken +15%'},
+  {min:0, f:0.30,lbl:'Spent',note:'no Surge; stagger on heavies'},
+];
+function bandOf(v){ for(let i=0;i<BANDS.length;i++) if(v>=BANDS[i].min) return i; return 5; }
+
+/* Growth gates — Table 4. */
+const STAGES=[
+ {id:'egg',      n:'Egg',            feed:0,   score:0,    scale:.26, moves:0},
+ {id:'hatchling',n:'Hatchling',      feed:10,  score:0,    scale:.40, moves:1},
+ {id:'chick',    n:'Chick',          feed:40,  score:0,    scale:.55, moves:2},
+ {id:'fledgling',n:'Fledgling',      feed:120, score:150,  scale:.75, moves:3},
+ {id:'cockerel', n:'Cockerel/Pullet',feed:260, score:400,  scale:.92, moves:4},
+ {id:'adult',    n:'Adult',          feed:480, score:700,  scale:1.00, moves:5},
+ {id:'prime',    n:'Prime',          feed:900, score:1100, scale:1.00, moves:6},
+];
+
+/* Arenas — Table 17. Each adds a rule, not just a tougher bird. */
+const ARENAS=[
+ {n:1,name:'The Yard',      place:'Kerala village',        rule:'None. Tutorial tier — the Cull cannot fire here.',
+  w:7,d:5,wall:true, cull:false, ai:1, pal:{sky:['#3a2418','#7d3f22'],ground:'#6b3a22',mat:'#a2562c',accent:'#e8dcc4',crowd:'#20150f',lamp:'#f6c76a'},
+  sw:['#8d3a1d','#3f6b4a','#e8e0d2']},
+ {n:2,name:'Laterite Ring', place:'Karnataka quarry',       rule:'The ring shrinks to 6 × 4 m. Corners arrive sooner.',
+  w:6,d:4,wall:true, cull:true, ai:2, pal:{sky:['#2a1a12','#8a4a20'],ground:'#7a3d1c',mat:'#b26a2c',accent:'#f0d9a8',crowd:'#1a110b',lamp:'#ffb454'},
+  sw:['#7d3a1c','#b8823a','#e0cba8']},
+ {n:3,name:'Salt Flat',     place:'Rann of Kutch',          rule:'Heat. Water drains 40 percent faster inside the bout.',
+  w:7,d:5,wall:true, cull:true, ai:2, heat:true, pal:{sky:['#9fb2c4','#e6e2d4'],ground:'#d9d2c0',mat:'#eae4d4',accent:'#2d3a44',crowd:'#8e8b80',lamp:'#ffffff'},
+  sw:['#e6e2d4','#a9bccd','#f7f3e6']},
+ {n:4,name:'Bamboo Cage',   place:'Assam',                  rule:'Low light. Feather dust catches the lamps and reads.',
+  w:7,d:5,wall:true, cull:true, ai:3, dark:true, pal:{sky:['#08120c','#123024'],ground:'#16281c',mat:'#22402c',accent:'#e8b95e',crowd:'#050b07',lamp:'#ffc861'},
+  sw:['#123024','#1f4030','#e8b95e']},
+ {n:5,name:'Ridge Ring',    place:'Himachal',               rule:'Wind. Loose feathers are pushed across the mat, and so is knockback.',
+  w:7,d:5,wall:true, cull:true, ai:3, wind:true, pal:{sky:['#39434d','#8fa2b0'],ground:'#4a5158',mat:'#6a6f74',accent:'#dfe6ea',crowd:'#242a30',lamp:'#dce8f2'},
+  sw:['#5b6570','#39543f','#dfe6ea']},
+ {n:6,name:'The Long Spur', place:'Decommissioned facility',rule:'No wall. Ring-out is the only way out of the mat.',
+  w:7,d:5,wall:false, cull:true, ai:4, ringout:true, pal:{sky:['#0a0a0c','#241a14'],ground:'#2a2624',mat:'#3a3634',accent:'#ff9b3d',crowd:'#080808',lamp:'#ff8c2a'},
+  sw:['#2a2624','#ff9b3d','#5a5550']},
+];
+
+/* Equipment — Table 16. Every addon costs mass, and mass costs rest. */
+const ADDONS=[
+ {id:'steelcap', n:'Steel cap',       slot:'Beak',   mass:.15, desc:'Damage +12%', cost:'Startup +1 tick on beak moves'},
+ {id:'hook',     n:'Serrated hook',   slot:'Beak',   mass:.10, desc:'Guard chip +50%', cost:'Sheds 2 extra feathers on block'},
+ {id:'shockbeak',n:'Shock beak',      slot:'Beak',   mass:.25, desc:'Counter-hit stun +6 ticks', cost:'Unusable below 30 rest'},
+ {id:'jerkin',   n:'Quilted jerkin',  slot:'Feather',mass:.40, desc:'Damage taken −15%', cost:'Move speed −8%'},
+ {id:'mantle',   n:'Bone mantle',     slot:'Feather',mass:.90, desc:'Damage taken −25%', cost:'Rest regen −20%'},
+ {id:'oilcoat',  n:'Oil coat',        slot:'Feather',mass:.05, desc:'Sidestep +10%', cost:'No damage reduction at all'},
+ {id:'blades',   n:'Spur blades',     slot:'Spur',   mass:.20, desc:'Heavy damage +18%', cost:'5% stumble on own heavy'},
+ {id:'griptalon',n:'Grip talons',     slot:'Spur',   mass:.10, desc:'Sidestep recovery −2 ticks', cost:'Damage −5%'},
+ {id:'shockspur',n:'Shock spurs',     slot:'Spur',   mass:.30, desc:'Guard break double chip', cost:'Surge duration −0.5 s'},
+];
+const ADDON=Object.fromEntries(ADDONS.map(a=>[a.id,a]));
+
+/* Corner bag — Appendix A. */
+const CORNER=[
+ {id:'cloth', n:'Wet cloth',  desc:'Rest +8'},
+ {id:'grit',  n:'Grit',       desc:'Damage +5% for one round'},
+ {id:'oil',   n:'Capful of oil',desc:'Sidestep +10% for one round'},
+ {id:'salt',  n:'Salt block', desc:'Water +10'},
+ {id:'wrap',  n:'Beak wrap',  desc:'Startup −1 tick for one round'},
+ {id:'file',  n:'Spur file',  desc:'Chip +25%'},
+ {id:'hood',  n:'Hood',       desc:'Opponent’s first Surge costs double'},
+ {id:'spare', n:'Spare feather',desc:'Cosmetic. Restores a shed cluster'},
+];
+
+/* AI ladder — Appendix A. */
+const AI_LADDER=[
+ {n:'Sparring',  react:24, guard:.35, side:.05, surge:99,  aggr:.55},
+ {n:'Circuit',   react:18, guard:.55, side:.15, surge:3,   aggr:.68},
+ {n:'Contender', react:14, guard:.70, side:.25, surge:4,   aggr:.80},
+ {n:'Champion',  react:10, guard:.82, side:.35, surge:3,   aggr:.92},
+];
+
+/* Field notes — forty of them. The Cinder Line is only explained here. */
+const NOTES=[
+ ['Ledger, first entry','Pen 4, one egg, no hen. The debt is 11,400 and the rules board does not care.','The previous keeper left the gate open and the feed book half-written. I have four pens, one incubator, and a bird I have not met yet.'],
+ ['Rules board, §1','On weight classes','Bantam under 1.0 kg. Light 1.0 to 2.6. Medium 2.6 to 3.8. Heavy above. A bantam never meets a heavy; the board is blunt about it and the board is right.'],
+ ['Breeder log, Aseel','Hard feather, upright carriage','Two thousand years of selection for exactly this animal, and it still walks into the wall if you let it. Upright birds read range badly. Keep the wall behind them, not beside them.'],
+ ['Vet notebook, p. 12','On exhaustion','A bird does not tire in the ring. It arrives tired and the ring finds out. Feed, water, rest: three meters, one of them always the lowest, and the lowest one is the fight.'],
+ ['Steward’s memo','Ring dimensions','Seven by five, knee-high wall, no padding. The wall is not there to keep the bird in. It is there to be used.'],
+ ['Ledger, entry 9','On the first cull I watched','The crowd went quiet before the referee moved, which is how you know they have seen it before and did not warn me.'],
+ ['Rules board, §14','Corner time','Eight seconds, one item, one instruction. The only place a bout is turned by a decision instead of an execution.'],
+ ['Breeder log, Shamo','Tallest stance on the circuit','Long neck buys reach and sells recovery. Every Shamo I have kept has lost a round to a bird it could not reach down to.'],
+ ['Field note, Laterite','On the quarry ring','They took a metre off the width and the whole sport changed. Corners arrive at you now. Two steps and you are against the wall with nowhere to put your feet.'],
+ ['Vet notebook, p. 31','Feather counts','A hard hit sheds a visible clump. A plume means a Surge. Count the feathers and you know how badly a bird is doing without a drop of red on the mat.'],
+ ['Steward’s memo','On the referee','The referee is a bird. This is not a joke, it is a cost decision: a bird does not take a bribe and does not give an interview.'],
+ ['Ledger, entry 22','On the money','Coin comes from bouts and story beats. It cannot be bought. If anyone ever offers to sell you coin, they are selling you a different game.'],
+ ['Breeder log, Cornish','Widest body on the roster','Armour, not evasion. A Cornish that learns to walk backwards is worth two that learn to strike.'],
+ ['Rules board, §22','Medical checks','Between bouts, before the bell. A bird that fails the check fights anyway if the keeper signs. Keepers sign.'],
+ ['Field note, Salt Flat','On heat','Water goes first out here. Forty percent faster, and the board does not adjust the round length for it. Drink the bird before you walk it out.'],
+ ['Vet notebook, p. 44','On the Surge','Five unanswered hits and the crest lifts. Six seconds of power, three and a half of helplessness. Nobody makes you spend it. Everybody spends it early.'],
+ ['Ledger, entry 40','On a bad decision','I spent the Surge on a bird at 60 rest because I wanted the round. I got the round. I lost the third one and the bird.'],
+ ['Breeder log, Cochin','Feathered shanks','Low hits die in the leg feathers. Everything else lands. Walk it forward slowly and let the other bird come to you.'],
+ ['Steward’s memo','On ring-outs','One arena has no wall. One. It is the last one and it is not an accident that it is the last one.'],
+ ['Field note, Bamboo Cage','On low light','The dust catches the lamps and for about a second you can see the whole shape of the exchange. Then it is dark again and you are guessing.'],
+ ['Rules board, §31','On the Cull','A bout may end with the bird taken. The board does not call it a death. The board is careful with words.'],
+ ['Vet notebook, p. 58','On the margins','Ninety percent or more of its vitality, less than ten of yours, every round lost. That is not a close loss. That is a collapse, and the board has a form for it.'],
+ ['Ledger, entry 61','On the trophy wall','Four names on the wall. Two of them I cannot remember fighting, which is the worst thing about the wall.'],
+ ['Breeder log, Crevecoeur','Crest blocks its own vision','A strong beak and a blind side. Feed it, walk it, and never let it guard on the crest side.'],
+ ['Field note, Ridge Ring','On wind','Loose feathers go sideways here and so does knockback. The mat is the same size and the ring is not.'],
+ ['Steward’s memo','On the crowd','They bet. We do not print the slips and we do not show the money on screen. Everything else about this sport is honest.'],
+ ['Vet notebook, p. 71','On the Spent window','Three and a half seconds where the bird cannot lift its head. A defender who reads the Surge coming can win the round inside that window. That is the exchange the sport is built to produce.'],
+ ['Ledger, entry 78','On the rival','Meher runs a step ahead of me and does not gloat. She is the argument for quitting, and she is winning it.'],
+ ['Breeder log, Andalusian','No standout, no weakness','The most honest bird on the circuit. It will not win you a round you did not earn.'],
+ ['Field note, Laterite','On the second tier','Re-run an arena you have already cleared. Grinding an old tier with a new bird is not cheating; it is the only reason a cull is survivable.'],
+ ['Rules board, §40','On unranked bouts','A bout can be marked unranked before the bell. The Cull cannot fire in an unranked bout and the win does not count. If a keeper wants a safe fight, the board provides one.'],
+ ['Vet notebook, p. 88','On mass','Every addon is weight, and weight is rest, and rest is the third round. A fully kitted bird hits harder for two rounds and has nothing left for the one that decides it.'],
+ ['Ledger, entry 96','On the incubator','A culled bird leaves a legacy egg. Seventy percent of what it learned, its breed, one upgrade at random. The board calls this mercy. I call it arithmetic.'],
+ ['Breeder log, Sebright','Fastest bird in the game','Four-hit combos and a constitution made of paper. Keep it moving or keep it home.'],
+ ['Steward’s memo','On the six arenas','Each arena adds a rule rather than a tougher opponent, so the palette and the rule are learned together. That is a design decision, not a coincidence.'],
+ ['Vet notebook, p. 103','On growth','Feed and score both gate the stage, and the lower one always wins. You cannot buy a champion and you cannot grind one.'],
+ ['Field note, The Long Spur','On the last arena','Concrete, sodium orange, no wall. Everything the circuit taught you about corners is wrong here and the board will not say so out loud.'],
+ ['Ledger, entry 118','On a bird that grew','I saw an opponent come out of a cull larger than it went in. The referee logged it as a scale error. The referee is a bird.'],
+ ['Minutes, rules board','Item 4, unexplained','One standing item has never been explained at this board: why a humiliated bird’s opponent sometimes gains mass. The minutes record the question four times across nine years.'],
+ ['Breeder log, Cinder Line','Banned programme','Selected for birds that gain mass from victory. Banned. Not destroyed — banned, which is a different word and the board chose it carefully.'],
+ ['Ledger, final entry','On the egg I inherited','One egg from that line, in pen 4, with the debt. I have read all forty notes now. I am going to raise it anyway, because the alternative is to leave the gate open like the last keeper did.'],
+];
+
+/* ---------------------------------------------------------------------------
+   2. SAVE STATE
+   ------------------------------------------------------------------------ */
+const SAVE_KEY='gallus.circuit.v1';
+const DEF_OPTS={shake:1,hitstop:1,blur:1,rm:false,assist:false,buf:4,flash:true,sfx:1,touch:true};
+
+let S=null;
+function freshState(){
+  return {
+    v:1, coin:900, feed:34, water:34, unlocked:1, notes:[0], bouts:0, wins:0, culls:0,
+    birds:[], culled:[], eggs:[], corner:'grit', ranked:true, sel:0, opts:{...DEF_OPTS},
+    stations:{pens:2,incubator:1,silo:1,tank:1,med:0,yard:0}, found:false
+  };
+}
+function save(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(S)); }catch(e){} }
+function load(){
+  try{ const r=localStorage.getItem(SAVE_KEY); if(!r) return null; const o=JSON.parse(r);
+    if(!o||o.v!==1||!o.birds) return null; o.opts={...DEF_OPTS,...(o.opts||{})};
+    o.birds.forEach(b=>{ b.breed=BREED[b.breedId]||BREEDS[0]; });
+    return o;
+  }catch(e){ return null; }
+}
+function newBird(breedId,stageIdx){
+  const b=BREED[breedId];
+  const st=stageIdx==null?1:stageIdx;
+  return {
+    uid:'b'+Date.now().toString(36)+ri(100,999),
+    name:'', breedId, breed:BREED[breedId], stage:st, feed:STAGES[st].feed, score:0,
+    food:92, water:92, rest:92, trains:{pow:0,rea:0,agi:0,con:0},
+    loadout:[], fights:0, wins:0, lineage:null
+  };
+}
+const NAMES_A=['Kara','Vela','Muthu','Sona','Ravi','Jaya','Bela','Tara','Nila','Anu','Dara','Ila','Mira','Rhea','Sura','Veda','Zara','Asha','Noor','Pia'];
+const NAMES_B=['of the Yard','of Laterite','Second','Cinder','Spur','Line','Dust','Quiet','Nine','Iron','Salt','Amber'];
+function nameBird(){ return pick(NAMES_A)+' '+pick(NAMES_B); }
+
+function ensureStarter(){
+  if(S.birds.length) return;
+  const b=newBird('aseel',2); b.name='Kara of the Yard'; b.feed=44; b.score=0;
+  S.birds.push(b); S.sel=0;
+  S.eggs.push({breedId:'oeg', left:1, genes:[ri(1,9),ri(1,9),ri(1,9)]});
+}
+function curBird(){ if(!S.birds.length) return null; S.sel=clamp(S.sel,0,S.birds.length-1); return S.birds[S.sel]; }
+
+/* ---------------------------------------------------------------------------
+   3. DERIVED NUMBERS
+   ------------------------------------------------------------------------ */
+function condFactor(v){ return BANDS[bandOf(v)].f; }
+function outputOf(cond){
+  // weighted geometric mean, Table 6 note
+  const f=condFactor(cond.food), w=condFactor(cond.water), r=condFactor(cond.rest);
+  return Math.pow(f,0.35)*Math.pow(w,0.30)*Math.pow(r,0.35);
+}
+function bandOfBird(b){ return bandOf(Math.min(b.food,b.water,b.rest)); }
+function breedStats(b){
+  const br=BREED[b.breedId];
+  return {
+    pow: clamp(br.pow + (b.trains?b.trains.pow:0), 1, 12),
+    rea: clamp(br.rea + (b.trains?b.trains.rea:0), 1, 12),
+    agi: clamp(br.agi + (b.trains?b.trains.agi:0), 1, 12),
+    con: clamp(br.con + (b.trains?b.trains.con:0), 1, 12),
+  };
+}
+function powerFactor(b){ const s=breedStats(b); return clamp(0.85 + (s.pow-5.5)*0.030, 0.85, 1.15); }
+function massOf(b){
+  const br=BREED[b.breedId];
+  let m=br.kg * STAGES[b.stage].scale;
+  (b.loadout||[]).forEach(id=>{ if(ADDON[id]) m+=ADDON[id].mass; });
+  return Math.max(.35,m);
+}
+function stageNext(b){ return STAGES[Math.min(STAGES.length-1,b.stage+1)]; }
+function canEvolve(b){
+  const nx=STAGES[Math.min(STAGES.length-1,b.stage+1)];
+  if(nx===STAGES[b.stage]) return false;
+  return b.feed>=nx.feed && b.score>=nx.score;
+}
+function scoreBonus(b,oppScore){
+  // 0.02% per 10 points of score above the opponent, capped at 6%
+  const d=(b.score-oppScore)/10*0.0002;
+  return clamp(1+d,1,1.06);
+}
+
+/* ---------------------------------------------------------------------------
+   4. THE BOUT — 60 Hz fixed tick simulation
+   Everything here is deterministic-ish and identical on every device.
+   ------------------------------------------------------------------------ */
+const TPS=60;                 // ticks per second, never scaled by frame rate
+const ROUND_TICKS=45*TPS;     // 45 s rounds
+
+const F={
+  on:false, phase:'idle', phaseT:0,
+  arena:null, p:null, o:null, ai:null,
+  round:1, winsP:0, winsO:0, timer:ROUND_TICKS,
+  hitstop:0, shake:0, dil:1, dilT:0,
+  parts:[], dust:[], puffs:[],
+  acc:0, last:0, raf:0, paused:false,
+  result:null, cull:null, ranked:true, birdRef:null, oppRef:null,
+  msg:null, msgT:0, hitFlash:0, log:[],
+  camera:{x:0,zoom:1.08,shakeX:0,shakeY:0},
+};
+
+function hasAddon(f,id){ return f.addons.indexOf(id)>=0; }
+
+function makeFighter(bird,isP,name,condOverride){
+  const st=breedStats(bird), mass=massOf(bird);
+  let hp=Math.round(92 + st.con*5.2 + mass*4.2);
+  if(S.opts.assist && isP) hp=Math.round(hp*1.2);
+  const cond = condOverride || {food:bird.food, water:bird.water, rest:bird.rest};
+  return {
+    isP, bird, breed:BREED[bird.breedId], name:name||bird.name,
+    mass, hp, maxHp:hp, stats:st, powerF:powerFactor(bird),
+    addons:(bird.loadout||[]).slice(), score:bird.score||0,
+    x: isP?-1.15:1.15, z:0, vx:0, vz:0, facing: isP?1:-1,
+    state:'idle', st:0, mv:null, mt:0, dur:0, hitDone:false,
+    guard:false, stun:0, invuln:0, knock:0,
+    flash:0, hurt:0, lean:0, walkPhase:0, breath:rnd(6),
+    streak:0, surge:'none', surgeT:0, cd:0, surgeHits:0, surgeUsed:0,
+    cond:{food:cond.food, water:cond.water, rest:cond.rest}, out:outputOf(cond),
+    band:bandOf(Math.min(cond.food,cond.water,cond.rest)),
+    scale:1, scaleT:1, ko:false, feathLvl:0,
+    ai:null, corner:null, damageDealt:0, damageTaken:0,
+    hitLanded:0, whiff:0, tickAnim:0,
+    bodyScale:STAGES[bird.stage].scale,
+  };
+}
+
+/* ---- world helpers ---- */
+function arenaHalfW(){ return F.arena.w/2; }
+function clampPos(f){
+  const hw=arenaHalfW()-0.34;
+  if(F.arena.ringout){
+    // no wall: falling off the mat is a ring-out
+    if(Math.abs(f.x)>hw+0.55){ ringOut(f); return; }
+  } else {
+    f.x=clamp(f.x,-hw,hw);
+  }
+  f.z=clamp(f.z,-F.arena.d/2+0.3, F.arena.d/2-0.3);
+}
+function nearWall(f){
+  if(!F.arena.wall) return false;
+  const hw=arenaHalfW()-0.34;
+  return Math.abs(Math.abs(f.x)-hw)<0.42;
+}
+function ringOut(f){
+  if(f.ko||F.phase!=='fight') return;
+  f.ko=true; f.hp=0; f.state='ko'; f.stun=999;
+  F.shake=18; burst(f,60,400);
+  announce(f.isP?'RING-OUT':'RING-OUT', 90);
+  endRound(f.isP?'o':'p','ringout');
+}
+
+/* ---- input ---- */
+const IN={left:false,right:false,guard:false};
+const Q=[];  // input buffer: {a, t}
+let tickNow=0;
+function press(a){
+  if(Q.length>12) Q.shift();
+  Q.push({a, t:tickNow});
+}
+function takeBuffered(){
+  const lim=Math.max(2,S.opts.buf);
+  for(let i=0;i<Q.length;i++){
+    if(tickNow-Q[i].t<=lim){ const a=Q[i].a; Q.splice(0,i+1); return a; }
+  }
+  Q.length=0; return null;
+}
+function clearBuffer(){ Q.length=0; }
+
+/* ---- timing helpers ---- */
+function suOf(f,mv){
+  let s=mv.su + clamp(Math.round((6-f.stats.agi)*0.34),-2,2);
+  if(f.band>=2 && mv.kind==='heavy') s+=1;
+  if(f.band>=4 && mv.kind!=='light') s+=1;
+  if(hasAddon(f,'steelcap') && mv.id==='peck') s+=1;
+  if(f.corner==='wrap') s-=1;
+  if(f.surge==='on') s=Math.round(s/1.15);
+  return Math.max(2,s);
+}
+function rcOf(f,mv){
+  let r=mv.rc + clamp(Math.round((6-f.stats.agi)*0.34),-2,2);
+  if(f.band>=3) r+=1;
+  if(f.surge==='on') r=Math.round(r/1.15);
+  return Math.max(3,r);
+}
+
+/* ---- state entry ---- */
+function setState(f,s){ f.state=s; f.st=s; }
+function startMove(f,id){
+  const mv=MOVES[id];
+  f.mv=mv; f.mt=0; f.hitDone=false;
+  f.dur=suOf(f,mv)+mv.ac+rcOf(f,mv);
+  setState(f,'attack');
+  f.lean=0;
+  // movement cost of a heavy swing
+  if(mv.kind==='heavy'||mv.kind==='mid'){
+    f.cond.food=Math.max(0,f.cond.food-0.5);
+    f.cond.rest=Math.max(0,f.cond.rest-1.5*(1+f.mass/2));
+    refreshOut(f);
+  }
+  // spur cannot be used below 30 rest if shock beak — flavour hook kept
+  sfx(mv.kind==='light'?'whooshL':'whooshH');
+}
+function refreshOut(f){
+  f.out=outputOf(f.cond);
+  f.band=bandOf(Math.min(f.cond.food,f.cond.water,f.cond.rest));
+}
+
+/* ---- per-tick fighter step ---- */
+function stepFighter(f,dt){
+  const opp = f===F.p?F.o:F.p;
+  f.breath+=dt*2.2;
+  f.walkPhase+=dt*8;
+  f.flash=Math.max(0,f.flash-dt*4.5);
+  f.hurt=Math.max(0,f.hurt-dt*3);
+  f.tickAnim++;
+
+  // surge state machine
+  if(f.surge==='on'){
+    f.surgeT--;
+    if(f.surgeT<=0){ endSurge(f,false); }
+  } else if(f.surge==='spent'){
+    f.surgeT--;
+    if(f.surgeT<=0){ f.surge='cool'; f.cd=12*TPS; }
+  } else if(f.surge==='cool'){
+    f.cd--;
+    if(f.cd<=0){ f.surge='none'; f.streak=0; }
+  } else if(f.surge==='none' && f.streak>=5){
+    f.surge='ready';
+  }
+
+  // scale easing (surge rig transform, not a swap)
+  const targetScale = f.surge==='on'?1.35:(f.surge==='spent'?1.05:1);
+  f.scale=lerp(f.scale,targetScale,dt*(f.surge==='on'?7:9));
+
+  if(f.ko) return;
+
+  // knockback decay (procedural, decel 3.5 m/s^2)
+  if(Math.abs(f.vx)>0.01){
+    const sg=Math.sign(f.vx);
+    f.vx-=sg*3.5*dt;
+    if(Math.sign(f.vx)!==sg) f.vx=0;
+    f.x+=f.vx*dt;
+  }
+  if(Math.abs(f.vz)>0.01){
+    f.vz*=0.88; f.z+=f.vz*dt;
+  }
+  clampPos(f);
+
+  if(f.state==='hitstun'){
+    f.stun--;
+    f.lean=lerp(f.lean,-0.25,dt*8);
+    if(f.stun<=0){ f.state='idle'; f.lean=0; }
+    return;
+  }
+  if(f.state==='ko'){ f.lean=lerp(f.lean,1.2,dt*3); return; }
+
+  if(f.state==='attack'){
+    f.mt++;
+    const mv=f.mv;
+    const su=suOf(f,mv);
+    // hit window
+    if(!f.hitDone && f.mt>su && f.mt<=su+mv.ac){
+      tryHit(f,opp,mv);
+    }
+    if(f.mt>=f.dur){
+      if(!f.hitDone && (mv.kind==='heavy'||mv.kind==='mid')){ f.streak=0; f.whiff++; }
+      f.mv=null; setState(f,'idle');
+    }
+    return;
+  }
+  if(f.state==='sidestep'){
+    f.invuln--;
+    f.mt++;
+    if(f.mt>=f.dur){ f.state='idle'; }
+    return;
+  }
+  if(f.state==='guard'){
+    f.guard=true;
+    if(!f.guardHold) f.state='idle';
+    return;
+  }
+  f.guard=false;
+
+  // ---- actionable: idle / walk ----
+  if(f.isP) playerActions(f,opp); else aiActions(f,opp);
+}
+
+function playerActions(f,opp){
+  const dir=(IN.right?1:0)-(IN.left?1:0);
+  f.facing = opp.x>=f.x?1:-1;
+  const spd=walkSpeed(f);
+
+  if(IN.guard && f.state!=='attack'){ f.state='guard'; f.guard=true; f.guardHold=1; return; }
+  f.guardHold=0;
+
+  const a=takeBuffered();
+  if(a==='peck'||a==='wing'||a==='talon'||a==='spur'||a==='clinch'){
+    if(a==='spur' && f.band>=4 && hasAddon(f,'shockbeak')) { /* unusable below 30 rest */ }
+    else { startMove(f,a); return; }
+  }
+  if(a==='sidestep'){
+    const d=(IN.up?-1:(IN.down?1:0))||(Math.random()<0.5?-1:1);
+    doSidestep(f,d); return;
+  }
+  if(a==='surge'){ trySurge(f); return; }
+
+  if(dir!==0){
+    f.facing=dir;
+    const sp=spd*(hasAddon(f,'jerkin')?0.92:1)*(f.band>=3?0.9:1);
+    f.x+=dir*sp*(1/60);
+    f.z=lerp(f.z, clamp(f.z,-1.4,1.4),0.1);
+    setState(f,'walk');
+    clampPos(f);
+    if(Math.random()<0.08) puff(f.x,0,'dust');
+  } else {
+    if(f.state==='walk') setState(f,'idle');
+    f.state = f.state==='walk'?'idle':f.state;
+    if(f.state!=='walk') f.state='idle';
+    f.z=lerp(f.z,0,0.06);
+  }
+}
+
+function walkSpeed(f){
+  let s=1.35 + (f.stats.agi-6)*0.13 + (f.mass-3)*-0.06;
+  s=clamp(s,0.75,2.2);
+  if(f.surge==='on') s*=1.15;
+  if(f.surge==='spent') s*=0.6;
+  if(f.band>=4) s*=0.86;
+  return s;
+}
+function doSidestep(f,dir){
+  f.invuln=8; f.mt=0;
+  f.dur=MOVES.side.su+MOVES.side.ac+MOVES.side.rc + (hasAddon(f,'griptalon')?-2:0);
+  f.z=clamp(f.z+dir*0.62*(1+(f.stats.agi-6)*0.03)*(hasAddon(f,'oilcoat')?1.1:1)*(f.corner==='oil'?1.1:1),-1.5,1.5);
+  f.x+=f.facing*0.16;
+  setState(f,'sidestep');
+  clampPos(f);
+  sfx('side');
+}
+function trySurge(f){
+  if(f.surge!=='ready') return;
+  f.surge='on'; f.surgeT=Math.round((6.0-(hasAddon(f,'shockspur')?0.5:0))*TPS);
+  f.surgeHits=0; f.surgeUsed++;
+  f.cond.food=Math.max(0,f.cond.food-3);
+  f.cond.water=Math.max(0,f.cond.water-3);
+  f.cond.rest=Math.max(0,f.cond.rest-6);
+  refreshOut(f);
+  F.shake=Math.max(F.shake,6);
+  F.dil=0.9; F.dilT=8;
+  burst(f,18,120);
+  sfx('surge');
+  if(f.isP) announce('SURGE',40);
+}
+function endSurge(f,interrupted){
+  f.surge='spent'; f.surgeT=Math.round(3.5*TPS);
+  burst(f,20,160);
+  if(f.isP||true) F.shake=Math.max(F.shake,4);
+  sfx('sag');
+}
+
+/* ---- hit detection & resolution ---- */
+function inRange(a,d,mv){
+  const dx=(d.x-a.x)*a.facing;
+  const dz=Math.abs(d.z-a.z);
+  const reach=mv.reach + (a.stats.rea-6)*0.045;
+  return dx>-0.3 && dx<=reach && dz<=0.66;
+}
+function tryHit(a,d,mv){
+  if(d.ko||F.phase!=='fight') return;
+  if(d.invuln>0) return;
+  if(!inRange(a,d,mv)) return;
+  a.hitDone=true;
+  applyHit(a,d,mv);
+}
+
+function applyHit(a,d,mv){
+  const blocked = d.guard && !mv.crush && mv.kind!=='throw' && d.state!=='hitstun';
+  const wall = nearWall(d) && mv.kind!=='throw' && !blocked;
+
+  let dmg = mv.dmg * a.powerF * a.out;
+  if(a.surge==='on') dmg*=1.40;
+  if(hasAddon(a,'steelcap') && mv.id==='peck') dmg*=1.12;
+  if(hasAddon(a,'blades') && mv.kind==='heavy') dmg*=1.18;
+  if(hasAddon(a,'griptalon')) dmg*=0.95;
+  if(wall) dmg*=1.15;
+  dmg*=scoreBonus(a,d.score);
+  if(a.corner==='grit') dmg*=1.05;
+
+  // defender side
+  if(d.surge==='on') dmg*=0.80;
+  if(d.surge==='spent') dmg*=1.30;
+  if(hasAddon(d,'jerkin')) dmg*=0.85;
+  if(hasAddon(d,'mantle')) dmg*=0.75;
+  if(S.opts.assist && d.isP) dmg*=0.8;
+  if(S.opts.assist && a.isP) dmg*=1.0;
+
+  let chip=false;
+  if(blocked){
+    chip=true;
+    dmg *= (mv.kind==='heavy'?0.22:0.14) * (hasAddon(a,'hook')?1.5:1) * (a.corner==='file'?1.25:1);
+    if(hasAddon(a,'shockspur') && mv.crush) dmg*=2;
+  }
+  if(mv.crush && blocked){ blocked=false; chip=false; }
+
+  dmg=Math.max(1,Math.round(dmg));
+
+  // ---- damage ----
+  d.hp=Math.max(0,d.hp-dmg);
+  d.damageTaken+=dmg; a.damageDealt+=dmg;
+  a.hitLanded++;
+
+  // ---- hitstop: 45 + 4.5*dmg ms, capped 300, max() not stack ----
+  let ms=45+4.5*dmg;
+  if(a.surge==='on') ms*=1.2;
+  ms=clamp(ms,0,300)*(S.opts.hitstop||1);
+  if(!S.opts.hitstop) ms=0;
+  F.hitstop=Math.max(F.hitstop, Math.round(ms/1000*TPS));
+
+  // ---- reaction ----
+  if(!blocked && !chip){
+    d.state='hitstun';
+    let hs=mv.hs;
+    if(d.band>=4) hs=Math.round(hs*1.15);
+    if(hasAddon(a,'shockbeak') && d.state==='attack') hs+=6;
+    d.stun=Math.max(6,hs);
+    d.hurt=1; d.flash=1;
+    d.guard=false;
+    // knockback ∝ damage × attackerMass/defenderMass
+    const kb=clamp(dmg*0.045*(a.mass/d.mass),0.35,3.4);
+    d.vx=(d.x>=a.x?1:-1)*kb;
+    if(wall){ d.stun+=6; F.shake=Math.max(F.shake,7); }
+    a.streak++; d.streak=0;
+    if(d.surge==='on'){
+      d.surgeHits++;
+      if(d.surgeHits>=3) endSurge(d,true);
+    }
+    sfx(mv.hit);
+    flashScreen(0.05+dmg*0.004);
+  } else {
+    // block
+    d.stun=Math.max(4,mv.bs||6);
+    d.state='hitstun';
+    d.vx=(d.x>=a.x?1:-1)*clamp(dmg*0.02,0.1,0.7);
+    a.streak++; d.streak=0;
+    sfx('block');
+    if(mv.crush){ announce('GUARD BREAK',50); F.shake=Math.max(F.shake,9); }
+  }
+  if(d.surge==='on') d.surgeHits=d.surgeHits;
+
+  // ---- cosmetic (never touches a hitbox) ----
+  const shed = Math.round(mv.fe * (0.7+dmg/20)) + (blocked?1:0) + (hasAddon(a,'hook')&&blocked?2:0);
+  burst(d, shed, mv.down);
+  F.shake=Math.max(F.shake, chip?1.5:2+dmg*0.28);
+
+  // KO
+  if(d.hp<=0){ d.ko=true; d.state='ko'; d.stun=999; F.shake=14; burst(d,24,400); }
+}
+
+/* ---- AI ---- */
+function aiActions(f,opp){
+  const L=f.ai;
+  const dx=opp.x-f.x, adx=Math.abs(dx);
+  f.facing = opp.x>=f.x?1:-1;
+  const reach=1.15+(f.stats.rea-6)*0.045;
+
+  L.t--;
+  // threat read: opponent in startup, reacted after `react` ticks
+  const threat = opp.state==='attack' && opp.mv && opp.mt<=suOf(opp,opp.mv) && adx<2.0
+    && (tickNow-L.atkSeen)>=L.react;
+  if(opp.state==='attack' && opp.mt===1) L.atkSeen=tickNow;
+
+  if(f.surge==='ready' && f.streak>=L.surge){
+    trySurge(f); return;
+  }
+
+  if(threat){
+    if(Math.random()<L.side*0.35 && f.invuln<=0){ doSidestep(f,Math.random()<0.5?-1:1); return; }
+    if(Math.random()<L.guard){ f.state='guard'; f.guard=true; f.guardHold=1; L.hold=ri(8,20); return; }
+  }
+  if(f.state==='guard'){
+    f.guard=true;
+    if(L.hold>0){ L.hold--; return; }
+    f.guard=false; f.state='idle';
+  }
+
+  if(L.t>0){
+    // continue current intent
+    if(L.intent==='close' && adx>reach*0.85){
+      f.x+=Math.sign(dx)*walkSpeed(f)*(1/60);
+      setState(f,'walk'); clampPos(f);
+      return;
+    }
+    if(L.intent==='back' && adx<2.4){
+      f.x-=Math.sign(dx)*walkSpeed(f)*0.7*(1/60);
+      setState(f,'walk'); clampPos(f); return;
+    }
+    if(f.state==='walk') f.state='idle';
+    return;
+  }
+
+  L.t=ri(4,11);
+  const r=Math.random();
+  if(adx>reach*1.15){
+    L.intent='close';
+    if(r<0.12 && adx<2.2){ doSidestep(f,Math.random()<0.5?-1:1); }
+    return;
+  }
+  // in range
+  if(r>L.aggr){ L.intent='back'; return; }
+  L.intent='hold';
+  const opts=['peck','peck','wing','talon'];
+  if(adx<reach*0.75 && Math.random()<0.22) opts.push('clinch');
+  if(opp.guard && Math.random()<0.55) opts.push('spur');
+  const m=pick(opts);
+  startMove(f,m);
+}
+
+/* ---- particles: feathers, down, dust ---- */
+function burst(f,n,down){
+  const pal=f.breed.pal;
+  F.shed=(F.shed||0)+n;
+  for(let i=0;i<n;i++){
+    F.parts.push({
+      x:f.x+rnd(0.3,-0.3), y:rnd(1.15,0.35)*f.scale, z:f.z+rnd(0.3,-0.3),
+      vx:rnd(2.2,-2.2)*(f.isP?1:-1)*0.7+rnd(1.4,-1.4),
+      vy:rnd(2.6,0.6), vz:rnd(1.2,-1.2),
+      rot:rnd(TAU), vr:rnd(9,-9), life:rnd(2.8,1.6), max:2.8,
+      s:rnd(0.16,0.07)*(f.scale), seed:rnd(100),
+      col: i%3===0?pal.hackle:(i%3===1?pal.wing:pal.body),
+      kind:'feather'
+    });
+  }
+  const dn=Math.round(down*0.35);
+  for(let i=0;i<dn;i++){
+    F.parts.push({
+      x:f.x+rnd(0.4,-0.4), y:rnd(1.3,0.4), z:f.z+rnd(0.4,-0.4),
+      vx:rnd(1.2,-1.2), vy:rnd(0.9,0.1), vz:rnd(0.7,-0.7),
+      rot:rnd(TAU), vr:rnd(3,-3), life:rnd(3.2,2.2), max:3.2,
+      s:rnd(0.055,0.025), seed:rnd(100),
+      col:'rgba(236,228,212,0.85)', kind:'down'
+    });
+  }
+}
+function puff(x,y,kind){
+  F.puffs.push({x,y:y||0.03,z:rnd(0.5,-0.5),r:rnd(0.14,0.05),life:0.6,max:0.6,kind:kind||'dust'});
+}
+function updateParticles(dt){
+  const wind=F.arena&&F.arena.wind?0.5:0;
+  for(let i=F.parts.length-1;i>=0;i--){
+    const p=F.parts[i];
+    p.life-=dt;
+    if(p.life<=0){ F.parts.splice(i,1); continue; }
+    if(p.kind==='feather'){
+      // flat-plate drag: anisotropic, resolved in the plate's own frame
+      p.vy-=4.5*dt;                 // deliberately light gravity
+      const nrm=Math.abs(Math.cos(p.rot));
+      p.vx*=1-(0.06+1.24*nrm)*dt*0.55;
+      p.vz*=1-(0.06+1.24*nrm)*dt*0.55;
+      p.vy*=1-(0.02+0.5*nrm)*dt*0.4;
+      p.vx+=Math.sin(p.life*7+p.seed)*0.9*dt;
+      p.rot+=p.vr*dt; p.vr*=0.985;
+    } else {
+      p.vy-=1.2*dt; p.vx*=0.96; p.vz*=0.96;
+      p.vx+=Math.sin(p.life*3+p.seed)*0.5*dt;
+      p.rot+=p.vr*dt*0.3;
+    }
+    p.x+=p.vx*dt+wind*dt;
+    p.y+=p.vy*dt;
+    p.z+=p.vz*dt;
+    if(p.y<0.02){ p.y=0.02; p.vy*=-0.22; p.vx*=0.6; p.vz*=0.6; p.vr*=0.5; }
+  }
+  for(let i=F.puffs.length-1;i>=0;i--){
+    const p=F.puffs[i]; p.life-=dt; p.r+=dt*0.5;
+    if(p.life<=0) F.puffs.splice(i,1);
+  }
+  if(F.parts.length>420) F.parts.splice(0,F.parts.length-420);
+}
+
+/* ---- rounds ---- */
+function announce(txt,ticks){
+  F.msg=txt; F.msgT=ticks;
+  if(UI&&UI.announce) UI.announce(txt,ticks);
+}
+function startBout(bird,oppBird,arenaIdx,opts){
+  opts=opts||{};
+  F.arena=ARENAS[arenaIdx];
+  F.ranked=opts.ranked!==false;
+  F.round=1; F.winsP=0; F.winsO=0; F.result=null; F.cull=null;
+  F.parts=[]; F.puffs=[]; F.hitstop=0; F.shake=0; F.dil=1; F.shed=0;
+  F.birdRef=bird; F.oppRef=oppBird;
+  F.ai=AI_LADDER[clamp(F.arena.ai-1,0,3)];
+  F.corner=S.corner;
+
+  const lvl=AI_LADDER[clamp(F.arena.ai-1,0,3)];
+  F.p=makeFighter(bird,true);
+  F.o=makeFighter(oppBird,false,oppBird.name);
+  F.o.ai={react:lvl.react,guard:lvl.guard,side:lvl.side,surge:lvl.surge,aggr:lvl.aggr,t:0,intent:'hold',hold:0,atkSeen:-999};
+  F.o.score=oppBird.score||0;
+  F.p.corner=S.corner;
+
+  F.p.x=-arenaHalfW()*0.42; F.o.x=arenaHalfW()*0.42;
+  F.phase='intro'; F.phaseT=0;
+  F.on=true; F.paused=false; F.acc=0; F.last=0; F.timer=ROUND_TICKS;
+  tickNow=0; clearBuffer();
+  announce('ROUND 1',80);
+  if(UI) UI.startBoutUI();
+  loopStart();
+}
+
+function resetRound(){
+  const p=F.p,o=F.o;
+  p.hp=p.maxHp; o.hp=o.maxHp;
+  p.x=-arenaHalfW()*0.42; o.x=arenaHalfW()*0.42;
+  p.z=0; o.z=0; p.vx=o.vx=0; p.vz=o.vz=0;
+  p.state=o.state='idle'; p.stun=o.stun=0; p.invuln=o.invuln=0;
+  p.ko=o.ko=false; p.mv=o.mv=null; p.guard=o.guard=false;
+  p.streak=o.streak=0;
+  if(p.surge==='on'){p.surge='none';p.surgeT=0;}
+  if(o.surge==='on'){o.surge='none';o.surgeT=0;}
+  F.timer=ROUND_TICKS; F.hitstop=0;
+  clearBuffer();
+}
+function endRound(winner,reason){
+  if(F.phase!=='fight') return;
+  F.phase='roundend'; F.phaseT=0;
+  F.roundWinner=winner; F.roundReason=reason||'ko';
+  if(winner==='p'){ F.winsP++; announce('ROUND',70); }
+  else if(winner==='o'){ F.winsO++; announce('ROUND',70); }
+  else announce('DRAW',70);
+  if(F.p.ko||F.o.ko) F.hitstop=Math.max(F.hitstop,8);
+  if(UI) UI.roundEnd();
+}
+
+function matchOver(){
+  const won=F.winsP>F.winsO;
+  const roundsP=F.winsP, roundsO=F.winsO;
+  const totalRounds=F.winsP+F.winsO;
+  // Cull: ranked or story, all rounds lost, opponent >=90% vitality, dealt <10%
+  const opp=F.o, me=F.p;
+  const oppFrac=opp.hp/opp.maxHp;
+  const dealtFrac=me.damageDealt/opp.maxHp;
+  const allLost = roundsP===0 && roundsO>=2;
+  const cullEligible = F.ranked && F.arena.cull && !S.opts.assist && allLost
+    && oppFrac>=0.90 && dealtFrac<0.10;
+  F.result={won, roundsP, roundsO, cull:cullEligible, arena:F.arena.n, reason:F.roundReason};
+  if(cullEligible){ runCull(); return; }
+  F.phase='matchend'; F.phaseT=0;
+  announce(won?'BOUT WON':'BOUT LOST',90);
+  if(UI) UI.matchEnd();
+}
+
+function runCull(){
+  F.phase='cull'; F.phaseT=0; F.cull={stage:0,t:0};
+  announce('',0);
+  if(UI) UI.cullStart();
+}
+
+function cullStep(){
+  const c=F.cull; if(!c) return;
+  c.t++;
+  const p=F.p;
+  if(c.stage===0){            // telegraph, -1.5s
+    F.dil=0.5; F.dilT=6;
+    if(c.t>90){ c.stage=1; c.t=0; F.hitstop=Math.round(0.22*TPS); F.shake=16; F.dil=0.35; F.dilT=24; burst(p,120,1200); }
+  } else if(c.stage===1){     // contact → growth
+    F.o.scale=Math.min(2.1,F.o.scale+0.014);
+    if(c.t%8===0) burst(F.o,6,60);
+    if(c.t>60){ c.stage=2; c.t=0; }
+  } else if(c.stage===2){     // lift
+    if(c.t>90){ c.stage=3; c.t=0; if(UI) UI.cullBlack(); }
+  } else if(c.stage===3){     // cut to black, 400ms
+    if(c.t>24){ c.stage=4; c.t=0; }
+  }
+}
+
+/* ---- main fixed-step loop ---- */
+function loopStart(){ F.last=0; F.acc=0; cancelAnimationFrame(F.raf); F.raf=requestAnimationFrame(frame); }
+function loopStop(){ cancelAnimationFrame(F.raf); F.raf=0; }
+
+function frame(ts){
+  if(!F.on) return;
+  if(!F.last) F.last=ts;
+  let dt=(ts-F.last)/1000; F.last=ts;
+  if(dt>0.25) dt=0.25;                 // tab-switch guard
+  if(!F.paused){
+    F.acc+=dt*F.dil;
+    let guard=0;
+    while(F.acc>=1/TPS && guard++<8){
+      simTick();
+      F.acc-=1/TPS;
+    }
+  }
+  if(R) R.draw(dt);
+  F.raf=requestAnimationFrame(frame);
+}
+
+function simTick(){
+  tickNow++;
+  if(F.msgT>0){ F.msgT--; if(F.msgT===0 && UI) UI.clearAnnounce(); }
+  if(F.shake>0) F.shake*=0.90;
+  if(F.dilT>0){ F.dilT--; if(F.dilT===0) F.dil=1; }
+
+  if(F.hitstop>0){ F.hitstop--; updateParticles(1/TPS); return; }  // fighters frozen, effects live
+
+  if(F.phase==='intro'){
+    F.phaseT++;
+    updateParticles(1/TPS);
+    if(F.phaseT>70){ F.phase='fight'; if(UI) UI.fightStart(); }
+    return;
+  }
+  if(F.phase==='fight'){
+    F.timer--;
+    stepFighter(F.p,1/TPS);
+    stepFighter(F.o,1/TPS);
+    separate();
+    drainMeters();
+    updateParticles(1/TPS);
+    // round end checks
+    if(F.p.ko||F.o.ko){
+      if(F.p.ko&&F.o.ko) endRound('draw','double');
+      else endRound(F.p.ko?'o':'p','ko');
+    } else if(F.timer<=0){
+      const a=F.p.hp/F.p.maxHp, b=F.o.hp/F.o.maxHp;
+      endRound(Math.abs(a-b)<0.02?'draw':(a>b?'p':'o'),'time');
+    }
+    return;
+  }
+  if(F.phase==='roundend'){
+    F.phaseT++;
+    updateParticles(1/TPS);
+    if(F.phaseT>110){
+      if(F.winsP>=2||F.winsO>=2||F.round>=3){ matchOver(); }
+      else { F.round++; resetRound(); F.phase='intro'; F.phaseT=0; announce('ROUND '+F.round,80); if(UI) UI.roundStart(); }
+    }
+    return;
+  }
+  if(F.phase==='cull'){ cullStep(); updateParticles(1/TPS); return; }
+  if(F.phase==='matchend'){ updateParticles(1/TPS); F.phaseT++; return; }
+}
+
+/* two bodies cannot occupy the same mat */
+function separate(){
+  const p=F.p,o=F.o;
+  if(!p||!o||p.ko||o.ko) return;
+  if(Math.abs(p.z-o.z)>0.5) return;
+  const dx=p.x-o.x, ad=Math.abs(dx), min=0.66;
+  if(ad<min){
+    const push=(min-ad)*0.5*(dx<0?-1:1);
+    p.x+=push; o.x-=push;
+    clampPos(p); clampPos(o);
+  }
+}
+
+function drainMeters(){
+  const heat=F.arena.heat?1.4:1;
+  const base=[4/ROUND_TICKS, 5/ROUND_TICKS*heat, 2/ROUND_TICKS];
+  [F.p,F.o].forEach(f=>{
+    if(f.ko) return;
+    const restMul=1+f.mass/2;
+    f.cond.food=Math.max(0,f.cond.food-base[0]);
+    f.cond.water=Math.max(0,f.cond.water-base[1]);
+    f.cond.rest=Math.max(0,f.cond.rest-base[2]*restMul*(hasAddon(f,'mantle')?1.2:1));
+    refreshOut(f);
+  });
+}
+
+/* ---- tiny synth (no audio assets, all generated) ---- */
+let AC=null;
+function sfx(kind){
+  if(!S||!S.opts.sfx) return;
+  try{
+    if(!AC) AC=new (window.AudioContext||window.webkitAudioContext)();
+    if(AC.state==='suspended') AC.resume();
+    const t=AC.currentTime;
+    const o=AC.createOscillator(), g=AC.createGain();
+    o.connect(g); g.connect(AC.destination);
+    let f0=200,f1=60,d=.09,type='sine',vol=.09;
+    if(kind==='light'){f0=420;f1=180;d=.06;vol=.05;type='triangle';}
+    if(kind==='medium'){f0=300;f1=90;d=.11;vol=.08;type='triangle';}
+    if(kind==='heavy'){f0=220;f1=55;d=.18;vol=.11;type='sawtooth';}
+    if(kind==='crush'){f0=160;f1=40;d=.24;vol=.12;type='sawtooth';}
+    if(kind==='block'){f0=900;f1=520;d=.05;vol=.035;type='square';}
+    if(kind==='whooshL'){f0=700;f1=1200;d=.07;vol=.02;type='sine';}
+    if(kind==='whooshH'){f0=500;f1=140;d=.12;vol=.03;type='sine';}
+    if(kind==='side'){f0=1200;f1=800;d=.06;vol=.02;type='sine';}
+    if(kind==='surge'){f0=110;f1=440;d=.4;vol=.1;type='triangle';}
+    if(kind==='sag'){f0=400;f1=90;d=.35;vol=.07;type='triangle';}
+    if(kind==='ui'){f0=1400;f1=1000;d=.04;vol=.025;type='square';}
+    o.type=type;
+    o.frequency.setValueAtTime(f0,t);
+    o.frequency.exponentialRampToValueAtTime(Math.max(30,f1),t+d);
+    g.gain.setValueAtTime(vol,t);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+d);
+    o.start(t); o.stop(t+d+0.02);
+  }catch(e){}
+}
+
+/* ---------------------------------------------------------------------------
+   5. RENDERER — arena, birds, feathers. Cosmetic by rule.
+   ------------------------------------------------------------------------ */
+const R={
+  cv:null,g:null,W:0,H:0,dpr:1,
+  tcv:null,tg:null,tW:0,tH:0,
+  s:100,cx:0,groundY:0,zoom:1,
+  t:0, running:false,
+
+  initBout(){
+    this.cv=$('#boutCv'); this.g=this.cv.getContext('2d');
+    this.resizeBout();
+  },
+  resizeBout(){
+    if(!this.cv) return;
+    const dpr=Math.min(window.devicePixelRatio||1,2);
+    const r=this.cv.getBoundingClientRect();
+    this.W=Math.max(320,r.width); this.H=Math.max(240,r.height); this.dpr=dpr;
+    this.cv.width=Math.round(this.W*dpr); this.cv.height=Math.round(this.H*dpr);
+    this.g.setTransform(dpr,0,0,dpr,0,0);
+    this.computeProjection();
+  },
+  computeProjection(){
+    const a=F.arena||ARENAS[0];
+    const base=Math.min(this.W/(a.w+2.1), this.H/3.2);
+    this.base=base;
+    this.s=base*this.zoom;
+    this.cx=this.W/2;
+    this.groundY=this.H*0.76;
+  },
+  draw(dt){
+    const g=this.g; if(!g||!F.on) return;
+    this.t+=dt;
+    this.zoom=lerp(this.zoom,F.camera.zoom||1,0.06);
+    this.computeProjection();
+
+    const a=F.arena;
+    const shake=(S.opts.shake||0)*(S.opts.rm?0:1)*F.shake;
+    const shx=Math.sin(this.t*61)*shake*0.9+Math.sin(this.t*37)*shake*0.4;
+    const shy=Math.cos(this.t*53)*shake*0.7;
+
+    g.save();
+    g.translate(shx,shy);
+
+    this.scene(a);
+    this.mat(a);
+    this.shadows();
+    // depth sort
+    const order=[F.p,F.o].slice().sort((x,y)=>x.z-y.z);
+    order.forEach(f=>this.bird(f));
+    this.particles();
+    this.puffs();
+    this.foreground(a);
+    g.restore();
+
+    if(F.phase==='cull') this.cullFx();
+    if(UI&&UI.hud) UI.hud();
+  },
+
+  /* ---------- arena: sky, stand, crowd, mat, wall ---------- */
+  scene(a){
+    const g=this.g, hd=a.d/2, W=this.W, H=this.H;
+    const hz=this.proj(0,0,-hd).y;
+    const standH=this.base*1.55;
+
+    // sky / back wall
+    const gr=g.createLinearGradient(0,0,0,hz+2);
+    gr.addColorStop(0,a.pal.sky[0]); gr.addColorStop(0.6,a.pal.sky[1]); gr.addColorStop(1,this.shade(a.pal.sky[1],-0.25));
+    g.fillStyle=gr; g.fillRect(0,0,W,hz+2);
+
+    // back wall behind the stand: ribbed panels, dark
+    const bwTop=this.base*0.40;
+    const bwg=g.createLinearGradient(0,bwTop,0,hz-standH);
+    bwg.addColorStop(0,this.shade(a.pal.crowd,0.10));
+    bwg.addColorStop(1,this.shade(a.pal.crowd,-0.20));
+    g.fillStyle=bwg; g.fillRect(0,bwTop,W,hz-standH-bwTop+2);
+    g.strokeStyle=this.hexA('#000000',0.28); g.lineWidth=1;
+    for(let i=0;i<Math.ceil(W/48)+1;i++){
+      g.beginPath(); g.moveTo(i*48,bwTop); g.lineTo(i*48,hz-standH); g.stroke();
+    }
+    g.fillStyle=this.hexA(a.pal.accent,0.07);
+    g.fillRect(0,hz-standH-3,W,3);
+    // hanging banners
+    for(let i=0;i<3;i++){
+      const bx=W*(0.17+i*0.33), bwd=this.base*0.62, bht=this.base*0.95;
+      const by=hz-standH-this.base*0.30;
+      g.fillStyle=this.hexA(a.pal.accent,0.10);
+      g.fillRect(bx,by,bwd,bht);
+      g.fillStyle=this.hexA(a.pal.accent,0.22);
+      g.fillRect(bx,by,bwd,Math.max(2,this.base*0.02));
+      g.strokeStyle=this.hexA(a.pal.accent,0.10); g.lineWidth=1;
+      g.beginPath(); g.moveTo(bx+bwd*0.5,by+this.base*0.1); g.lineTo(bx+bwd*0.5,by+bht*0.8); g.stroke();
+    }
+
+    // raked stand
+    g.fillStyle=this.shade(a.pal.crowd,0.14);
+    g.beginPath();
+    g.moveTo(-4,hz-standH); g.lineTo(W+4,hz-standH*0.94);
+    g.lineTo(W+4,hz); g.lineTo(-4,hz); g.closePath(); g.fill();
+    // step lines
+    g.strokeStyle=this.hexA('#000000',0.30); g.lineWidth=1;
+    for(let i=1;i<6;i++){
+      const y=hz-standH*(i/6);
+      g.beginPath(); g.moveTo(-4,y); g.lineTo(W+4,y-standH*0.01); g.stroke();
+    }
+
+    // crowd: six raked rows of heads and shoulders
+    for(let row=0;row<6;row++){
+      const y0=hz-standH*(0.10+row*0.155);
+      const sz=this.base*(0.036-row*0.0028);
+      const gap=sz*2.15;
+      for(let i=0;i<Math.ceil(W/gap)+2;i++){
+        const x=i*gap+((row*37)%Math.max(2,gap));
+        const bob=Math.sin(this.t*1.4+i*1.9+row*2.1)*this.base*0.010;
+        const h=((i*31+row*17)%29);
+        g.fillStyle= h===0?this.hexA(a.pal.lamp,0.42)
+                  : h<3?this.shade(a.pal.crowd,0.16)
+                  : this.shade(a.pal.crowd,-0.18+((i*7)%5)*0.03);
+        g.beginPath(); g.arc(x,y0+bob,sz,0,TAU); g.fill();
+        g.fillRect(x-sz*0.85,y0+bob+sz*0.55,sz*1.7,sz*1.6);
+      }
+    }
+
+    // rail between crowd and mat
+    g.fillStyle=this.shade(a.pal.crowd,-0.5);
+    g.fillRect(-4,hz-this.base*0.055,W+8,this.base*0.07);
+    g.fillStyle=this.hexA(a.pal.accent,0.20);
+    g.fillRect(-4,hz-this.base*0.058,W+8,Math.max(1,this.base*0.007));
+
+    // ground beyond the mat
+    const gd=g.createLinearGradient(0,hz,0,H);
+    gd.addColorStop(0,this.shade(a.pal.ground,0.10));
+    gd.addColorStop(1,this.shade(a.pal.ground,-0.5));
+    g.fillStyle=gd; g.fillRect(0,hz-1,W,H-hz+1);
+
+    // floor boards running to the camera
+    g.strokeStyle=this.hexA('#000000',0.14); g.lineWidth=1;
+    for(let i=-7;i<=7;i++){
+      const x0=this.cx+i*this.base*0.8;
+      const x1=this.cx+i*this.base*1.75;
+      g.beginPath(); g.moveTo(x0,hz); g.lineTo(x1,H); g.stroke();
+    }
+
+    // ceiling truss + lamps
+    const cy=this.base*0.34;
+    const cg=g.createLinearGradient(0,0,0,cy*1.5);
+    cg.addColorStop(0,'rgba(0,0,0,0.55)'); cg.addColorStop(1,'rgba(0,0,0,0)');
+    g.fillStyle=cg; g.fillRect(0,0,W,cy*1.5);
+    g.strokeStyle=this.hexA(a.pal.accent,0.13); g.lineWidth=2;
+    g.beginPath(); g.moveTo(0,cy); g.lineTo(W,cy); g.stroke();
+    for(let i=0;i<5;i++){
+      const lx=W*(0.06+i*0.22), ly=cy;
+      g.strokeStyle=this.hexA(a.pal.accent,0.16); g.lineWidth=1.5;
+      g.beginPath(); g.moveTo(lx,cy); g.lineTo(lx,cy+this.base*0.13); g.stroke();
+      const gl=g.createRadialGradient(lx,cy+this.base*0.16,2,lx,cy+this.base*0.16,this.base*1.7);
+      gl.addColorStop(0,this.hexA(a.pal.lamp,0.26));
+      gl.addColorStop(1,this.hexA(a.pal.lamp,0));
+      g.fillStyle=gl; g.fillRect(lx-this.base*1.7,cy-this.base*1.4,this.base*3.4,this.base*3.4);
+      g.fillStyle=this.hexA(a.pal.lamp,0.95);
+      g.beginPath(); g.arc(lx,cy+this.base*0.16,this.base*0.035,0,TAU); g.fill();
+    }
+  },
+
+  mat(a){
+    const g=this.g, hw=a.w/2, hd=a.d/2;
+    const P=(x,z)=>this.proj(x,0,z);
+    const fl=P(-hw,-hd), fr=P(hw,-hd), nr=P(hw,hd), nl=P(-hw,hd);
+
+    // mat surface with perspective
+    const mg=g.createLinearGradient(0,fl.y,0,nr.y);
+    mg.addColorStop(0,this.shade(a.pal.mat,-0.14));
+    mg.addColorStop(0.55,a.pal.mat);
+    mg.addColorStop(1,this.shade(a.pal.mat,-0.26));
+    g.fillStyle=mg;
+    g.beginPath(); g.moveTo(fl.x,fl.y); g.lineTo(fr.x,fr.y); g.lineTo(nr.x,nr.y); g.lineTo(nl.x,nl.y); g.closePath(); g.fill();
+
+    // woven mat lines (perspective)
+    g.strokeStyle=this.hexA('#000000',0.14); g.lineWidth=1;
+    for(let i=1;i<10;i++){
+      const t=i/10;
+      const lx=lerp(fl.x,nl.x,t), ly=lerp(fl.y,nl.y,t);
+      const rx=lerp(fr.x,nr.x,t), ry=lerp(fr.y,nr.y,t);
+      g.beginPath(); g.moveTo(lx,ly); g.lineTo(rx,ry); g.stroke();
+    }
+    g.strokeStyle=this.hexA(a.pal.accent,0.10);
+    for(let i=1;i<6;i++){
+      const t=i/6;
+      const ax=lerp(fl.x,fr.x,t), ay=lerp(fl.y,fr.y,t);
+      const bx=lerp(nl.x,nr.x,t), by=lerp(nl.y,nr.y,t);
+      g.beginPath(); g.moveTo(ax,ay); g.lineTo(bx,by); g.stroke();
+    }
+
+    const c=P(0,0);
+    // light pool from the lamps
+    const lp=g.createRadialGradient(c.x,c.y,this.base*0.1,c.x,c.y,this.base*2.2);
+    lp.addColorStop(0,this.hexA(a.pal.lamp,0.16));
+    lp.addColorStop(1,this.hexA(a.pal.lamp,0));
+    g.fillStyle=lp;
+    g.beginPath(); g.moveTo(fl.x,fl.y); g.lineTo(fr.x,fr.y); g.lineTo(nr.x,nr.y); g.lineTo(nl.x,nl.y); g.closePath();
+    g.fill();
+
+    // centre circle + scratch marks
+    g.strokeStyle=this.hexA(a.pal.accent,0.22); g.lineWidth=Math.max(1.5,this.base*0.012);
+    g.beginPath(); g.ellipse(c.x,c.y,this.base*0.52,this.base*0.19,0,0,TAU); g.stroke();
+    g.strokeStyle=this.hexA('#000000',0.22);
+    for(let i=0;i<7;i++){
+      const sx=c.x+Math.sin(i*2.3)*this.base*0.7;
+      const sy=c.y+Math.cos(i*1.7)*this.base*0.2;
+      g.beginPath(); g.moveTo(sx,sy); g.lineTo(sx+this.base*(0.12+((i*7)%5)*0.03),sy+this.base*0.03); g.stroke();
+    }
+
+    // wall
+    if(a.wall){
+      const wh=0.5;
+      [[-hw,1],[hw,-1]].forEach(([wx])=>{
+        const b1=P(wx,0,-hd), b2=P(wx,0,hd);
+        const t1=this.proj(wx,wh,-hd), t2=this.proj(wx,wh,hd);
+        const wg=g.createLinearGradient(0,t1.y,0,b2.y);
+        wg.addColorStop(0,this.shade(a.pal.mat,-0.46));
+        wg.addColorStop(1,this.shade(a.pal.mat,-0.62));
+        g.fillStyle=wg;
+        g.beginPath(); g.moveTo(b1.x,b1.y); g.lineTo(b2.x,b2.y); g.lineTo(t2.x,t2.y); g.lineTo(t1.x,t1.y); g.closePath(); g.fill();
+        // top cap
+        g.fillStyle=this.shade(a.pal.mat,-0.68);
+        const cap=this.base*0.028;
+        g.beginPath(); g.moveTo(t1.x,t1.y); g.lineTo(t2.x,t2.y);
+        g.lineTo(t2.x,t2.y+cap); g.lineTo(t1.x,t1.y+cap); g.closePath(); g.fill();
+        g.strokeStyle=this.hexA(a.pal.accent,0.22);
+        g.lineWidth=Math.max(1.5,this.base*0.012);
+        g.beginPath(); g.moveTo(t1.x,t1.y); g.lineTo(t2.x,t2.y); g.stroke();
+        // posts
+        for(let i=0;i<=5;i++){
+          const z=lerp(-hd,hd,i/5);
+          const pb=P(wx,0,z), pt=this.proj(wx,wh,z);
+          g.strokeStyle=this.hexA('#000000',0.38); g.lineWidth=Math.max(1.5,this.base*0.016);
+          g.beginPath(); g.moveTo(pb.x,pb.y); g.lineTo(pt.x,pt.y); g.stroke();
+        }
+      });
+    } else {
+      // ring-out: a hard lip and a drop into darkness
+      const dr=g.createLinearGradient(0,nl.y,0,this.H);
+      dr.addColorStop(0,'rgba(0,0,0,0)'); dr.addColorStop(1,'rgba(0,0,0,0.95)');
+      g.fillStyle=dr;
+      g.beginPath(); g.moveTo(nl.x,nl.y); g.lineTo(nr.x,nr.y); g.lineTo(nr.x+40,this.H); g.lineTo(nl.x-40,this.H); g.closePath(); g.fill();
+      g.strokeStyle=this.hexA(a.pal.accent,0.65); g.lineWidth=3;
+      g.beginPath(); g.moveTo(fl.x,fl.y); g.lineTo(nl.x,nl.y);
+      g.moveTo(fr.x,fr.y); g.lineTo(nr.x,nr.y); g.stroke();
+    }
+  },
+
+  foreground(a){
+    const g=this.g;
+    // heat haze / dust veil near the floor
+    const gr=g.createLinearGradient(0,this.H*0.6,0,this.H);
+    gr.addColorStop(0,'rgba(0,0,0,0)');
+    gr.addColorStop(1,a.dark?'rgba(0,0,0,0.6)':'rgba(18,9,3,0.5)');
+    g.fillStyle=gr; g.fillRect(0,this.H*0.6,this.W,this.H*0.4);
+    // floating dust in the light
+    for(let i=0;i<26;i++){
+      const seed=i*53.7;
+      const x=(seed*17+this.t*(6+i%5)*2)%this.W;
+      const y=this.H*0.45+((seed*11+this.t*7)%(this.H*0.5));
+      g.fillStyle=this.hexA(a.pal.lamp,0.10+((i*7)%6)/60);
+      g.beginPath(); g.arc(x,y,1+((i*3)%3)*0.6,0,TAU); g.fill();
+    }
+    if(a.dark){
+      const vg=g.createRadialGradient(this.W*0.5,this.H*0.45,this.W*0.08,this.W*0.5,this.H*0.45,this.W*0.7);
+      vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,0.8)');
+      g.fillStyle=vg; g.fillRect(0,0,this.W,this.H);
+    }
+  },
+
+  proj(x,y,z){
+    const s=this.s, p=1+z*0.055;
+    return {x:this.cx+(x-F.camera.x)*s*p, y:this.groundY+z*s*0.34-y*s*p, p};
+  },
+
+  shadows(){
+    const g=this.g;
+    [F.p,F.o].forEach(f=>{
+      if(!f) return;
+      const pr=this.proj(f.x,0,f.z);
+      const r=0.44*this.s*pr.p*(f.bodyScale||1)*f.scale;
+      g.fillStyle='rgba(0,0,0,0.45)';
+      g.beginPath(); g.ellipse(pr.x,pr.y,r,r*0.30,0,0,TAU); g.fill();
+    });
+  },
+
+  hexA(hex,a){
+    const c=hex.replace('#','');
+    const n=parseInt(c.length===3?c.split('').map(x=>x+x).join(''):c,16);
+    return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+  },
+
+  bird(f){
+    const g=this.g;
+    const p=this.proj(f.x,0,f.z);
+    if(!f.bodyScale) f.bodyScale=1;
+    const S2=this.s*p.p*f.scale*(f.bodyScale||1)*0.92;
+
+    // sidestep: dodge squash
+    let squash=1;
+    if(f.state==='sidestep') squash=0.9;
+    g.save();
+    g.translate(p.x,p.y);
+
+    // hit shake (hitshake: offsets the mesh, not the camera)
+    if(f.hurt>0){
+      g.translate(Math.sin(this.t*90)*f.hurt*3, Math.cos(this.t*77)*f.hurt*2);
+    }
+    if(f.state==='ko'){
+      const ang=(f.isP?-1:1)*1.35;
+      g.rotate(ang*Math.min(1,(f.stun>900?1:0.6)));
+    }
+    g.scale(f.facing*S2*squash, S2/squash);
+    this.drawBirdBody(f);
+    g.restore();
+
+    // surge rim light (drawn in screen space for a clean glow)
+    if(f.surge==='on'||f.surge==='ready'){
+      const on=f.surge==='on';
+      const gl=g.createRadialGradient(p.x,p.y-S2*0.55,S2*0.1,p.x,p.y-S2*0.55,S2*1.15);
+      gl.addColorStop(0,on?'rgba(242,167,27,0.32)':'rgba(242,167,27,0.14)');
+      gl.addColorStop(1,'rgba(242,167,27,0)');
+      g.fillStyle=gl;
+      g.beginPath(); g.arc(p.x,p.y-S2*0.55,S2*1.15,0,TAU); g.fill();
+    }
+    // damage flash
+    if(f.flash>0){
+      g.save();
+      g.globalAlpha=f.flash*0.5;
+      g.fillStyle='#fff';
+      g.beginPath(); g.ellipse(p.x,p.y-S2*0.6,S2*0.5,S2*0.42,0,0,TAU); g.fill();
+      g.restore();
+    }
+    // idle tell for low condition: panting marker
+    if(f.band>=4 && !f.ko && Math.sin(this.t*3)>0.6){
+      g.fillStyle='rgba(236,228,212,0.5)';
+      g.font=`${Math.max(9,S2*0.16)}px 'IBM Plex Mono',monospace`;
+      g.textAlign='center';
+      g.fillText('!',p.x,p.y-S2*1.35);
+    }
+  },
+
+  /* the bird itself, in metres, feet at (0,0), -y is up */
+  drawBirdBody(f,ctx){
+    const g=ctx||this.g, pal=f.breed.pal;
+    const t=this.t;
+    const breathing=Math.sin(f.breath)*0.012;
+    const st=f.state;
+
+    // ---- pose params ----
+    let lean=0, headFwd=0, headUp=0, legFwd=0, legLift=0, wingFlare=0, crouch=0, neckLen=1;
+    if(st==='walk'){ lean=0.10; legFwd=Math.sin(f.walkPhase)*0.16; }
+    if(st==='attack'&&f.mv){
+      const k=f.mv.id;
+      const prog=f.mt/Math.max(1,f.dur);
+      const wind=Math.min(1,f.mt/Math.max(1,suOf(f,f.mv)));
+      if(k==='peck'){ lean=0.12*wind; headFwd=0.30*wind; neckLen=1+0.35*wind; }
+      if(k==='wing'){ lean=0.08; wingFlare=0.8*wind; }
+      if(k==='talon'){ lean=0.16*wind; legLift=0.55*wind; legFwd=0.22*wind; }
+      if(k==='spur'){ lean=0.20*wind; legLift=0.78*wind; legFwd=0.3*wind; }
+      if(k==='clinch'){ lean=0.3*wind; headFwd=0.1*wind; }
+    }
+    if(st==='hitstun'){ lean=-0.30*(f.stun/24); headUp=0.1; }
+    if(st==='guard'){ lean=-0.06; crouch=0.06; }
+    if(st==='ko'){ lean=0.1; }
+    if(f.surge==='on'){ lean-=0.05; }
+    if(f.surge==='spent'){ crouch=0.12; lean=0.08; }
+
+    g.save();
+    g.translate(0,crouch*0.5);
+    g.rotate(lean*0.5);
+
+    const bodyY=-0.62+breathing-crouch*0.3;
+    const bodyRX=0.40, bodyRY=0.34;
+
+    // ---- tail ----
+    g.save();
+    g.translate(-0.30,bodyY-0.04);
+    g.rotate(-0.5+Math.sin(t*1.7)*0.05);
+    for(let i=0;i<4;i++){
+      const a=-0.22+i*0.16;
+      g.save(); g.rotate(a);
+      g.fillStyle=i%2?this.shade(pal.wing,-0.12):pal.wing;
+      g.beginPath();
+      g.moveTo(0,0); g.quadraticCurveTo(-0.28,-0.06,-0.46,-0.16); g.quadraticCurveTo(-0.24,-0.02,0,0.05);
+      g.closePath(); g.fill();
+      g.strokeStyle='rgba(0,0,0,0.25)'; g.lineWidth=0.008; g.stroke();
+      g.restore();
+    }
+    g.restore();
+
+    // ---- far leg ----
+    this.leg(g,f,pal,bodyY+0.18,-0.06,-legFwd*0.7,-legLift*0.7,0.55);
+
+    // ---- body ----
+    const bg=g.createLinearGradient(0,bodyY-bodyRY,0,bodyY+bodyRY);
+    bg.addColorStop(0,this.shade(pal.body,0.14));
+    bg.addColorStop(1,this.shade(pal.body,-0.22));
+    g.fillStyle=bg;
+    g.beginPath(); g.ellipse(0,bodyY,bodyRX,bodyRY,0.04,0,TAU); g.fill();
+    // belly light
+    g.fillStyle='rgba(255,240,220,0.06)';
+    g.beginPath(); g.ellipse(0.03,bodyY+0.1,bodyRX*0.78,bodyRY*0.62,0.04,0,TAU); g.fill();
+
+    // ---- feather cards (Tier A): contour strokes ----
+    g.strokeStyle='rgba(0,0,0,0.20)'; g.lineWidth=0.010;
+    const nCards=14;
+    for(let i=0;i<nCards;i++){
+      const a=-1.1+i*0.16;
+      const rx=Math.cos(a)*bodyRX*0.86, ry=Math.sin(a)*bodyRY*0.86;
+      g.beginPath();
+      g.moveTo(rx*0.55,bodyY+ry*0.55);
+      g.lineTo(rx*1.02,bodyY+ry*1.02+0.03);
+      g.stroke();
+    }
+    g.strokeStyle='rgba(255,240,210,0.13)';
+    for(let i=0;i<nCards;i++){
+      const a=-1.1+i*0.16;
+      const rx=Math.cos(a)*bodyRX*0.80, ry=Math.sin(a)*bodyRY*0.80;
+      g.beginPath();
+      g.moveTo(rx*0.6,bodyY+ry*0.6-0.01);
+      g.lineTo(rx*0.98,bodyY+ry*0.98);
+      g.stroke();
+    }
+
+    // ---- wing ----
+    const wf=wingFlare;
+    g.save();
+    g.translate(0.02,bodyY-0.02);
+    g.rotate(-0.15-wf*1.25);
+    g.fillStyle=this.shade(pal.wing,0.06);
+    g.beginPath();
+    g.moveTo(-0.18,0);
+    g.quadraticCurveTo(-0.10,-0.24-wf*0.18,0.26,-0.16-wf*0.34);
+    g.quadraticCurveTo(0.16,-0.02,0.10,0.10);
+    g.quadraticCurveTo(-0.06,0.12,-0.18,0);
+    g.closePath(); g.fill();
+    g.strokeStyle='rgba(0,0,0,0.22)'; g.lineWidth=0.009;
+    for(let i=0;i<3;i++){
+      g.beginPath(); g.moveTo(-0.12+i*0.06,0.02); g.lineTo(0.2-i*0.03,-0.12-wf*0.3); g.stroke();
+    }
+    g.restore();
+
+    // ---- neck + head ----
+    const neckBaseX=0.22, neckBaseY=bodyY-0.16;
+    const headX=neckBaseX+0.10+headFwd;
+    const headY=neckBaseY-0.30*neckLen+headUp*0.1;
+    g.strokeStyle=pal.hackle;
+    g.lineWidth=0.125;
+    g.lineCap='round';
+    g.beginPath();
+    g.moveTo(neckBaseX,neckBaseY);
+    g.quadraticCurveTo(neckBaseX+0.06+headFwd*0.5,neckBaseY-0.18*neckLen,headX,headY+0.06);
+    g.stroke();
+    // hackle sheen
+    g.strokeStyle='rgba(255,235,200,0.16)'; g.lineWidth=0.05;
+    g.beginPath();
+    g.moveTo(neckBaseX+0.02,neckBaseY);
+    g.quadraticCurveTo(neckBaseX+0.07+headFwd*0.5,neckBaseY-0.17*neckLen,headX,headY+0.08);
+    g.stroke();
+
+    // head
+    g.fillStyle=pal.body;
+    g.beginPath(); g.ellipse(headX,headY,0.093,0.086,0,0,TAU); g.fill();
+    // comb
+    g.fillStyle=pal.comb;
+    for(let i=0;i<3;i++){
+      const cx=headX-0.037+i*0.039;
+      const h=0.062-Math.abs(i-1)*0.014;
+      g.beginPath();
+      g.moveTo(cx-0.021,headY-0.070);
+      g.quadraticCurveTo(cx,headY-0.070-h*1.9,cx+0.021,headY-0.070);
+      g.closePath(); g.fill();
+    }
+    // beak
+    const bx=headX+0.078, by=headY+0.004;
+    g.fillStyle=pal.beak;
+    g.beginPath(); g.moveTo(bx,by-0.030); g.lineTo(bx+0.115,by+0.006); g.lineTo(bx,by+0.034); g.closePath(); g.fill();
+    g.strokeStyle='rgba(0,0,0,0.3)'; g.lineWidth=0.007; g.stroke();
+    // wattle
+    g.fillStyle=pal.comb;
+    g.beginPath(); g.ellipse(bx+0.016,by+0.062,0.024,0.036,0.2,0,TAU); g.fill();
+    // eye
+    g.fillStyle='#0b0a09';
+    g.beginPath(); g.arc(headX+0.038,headY-0.014,0.018,0,TAU); g.fill();
+    g.fillStyle='rgba(255,255,255,0.85)';
+    g.beginPath(); g.arc(headX+0.044,headY-0.020,0.007,0,TAU); g.fill();
+
+    // ---- addons on the silhouette ----
+    if(hasAddon(f,'steelcap')){
+      g.fillStyle='#b9bcc0';
+      g.beginPath(); g.moveTo(bx,by-0.034); g.lineTo(bx+0.122,by+0.006); g.lineTo(bx,by+0.038); g.closePath(); g.fill();
+      g.fillStyle='rgba(255,255,255,0.5)';
+      g.beginPath(); g.moveTo(bx+0.02,by-0.022); g.lineTo(bx+0.09,by-0.002); g.lineTo(bx+0.02,by+0.004); g.closePath(); g.fill();
+    }
+    if(hasAddon(f,'mantle')){
+      g.fillStyle='rgba(232,224,208,0.85)';
+      for(let i=0;i<3;i++){
+        g.beginPath();
+        g.ellipse(-0.12+i*0.13,bodyY-0.10+i*0.03,0.075,0.05,0.3,0,TAU); g.fill();
+      }
+    }
+
+    // ---- near leg ----
+    this.leg(g,f,pal,bodyY+0.20,0.06,legFwd,legLift,1);
+
+    // spur blades
+    if(hasAddon(f,'blades')){
+      g.fillStyle='#c9ccd0';
+      g.beginPath(); g.moveTo(0.10,-0.34+legLift*-0.3); g.lineTo(0.16,-0.44+legLift*-0.3); g.lineTo(0.06,-0.40+legLift*-0.3); g.closePath(); g.fill();
+    }
+
+    g.restore();
+  },
+
+  leg(g,f,pal,hx,ox,fwd,lift,alpha){
+    const kneeX=hx*0+ox+fwd*0.5;
+    const footX=ox+fwd;
+    g.strokeStyle=this.shade(pal.leg,alpha>0.9?0:-0.25);
+    g.lineWidth=0.055; g.lineCap='round';
+    g.globalAlpha=alpha>0.9?1:0.7;
+    g.beginPath();
+    g.moveTo(ox*0.6,-0.44);
+    g.lineTo(kneeX-0.02,-0.22-lift*0.10);
+    g.lineTo(footX,-0.01-lift*0.16);
+    g.stroke();
+    // foot
+    g.lineWidth=0.032;
+    g.beginPath();
+    g.moveTo(footX,-0.01-lift*0.16);
+    g.lineTo(footX+0.075,-0.005-lift*0.16);
+    g.moveTo(footX,-0.01-lift*0.16);
+    g.lineTo(footX-0.05,-0.005-lift*0.16);
+    g.stroke();
+    g.globalAlpha=1;
+  },
+
+  particles(){
+    const g=this.g;
+    for(const p of F.parts){
+      const pr=this.proj(p.x,p.y,p.z);
+      const a=clamp(p.life/p.max,0,1);
+      const sz=p.s*this.s*(1+p.z*0.035);
+      g.save();
+      g.translate(pr.x,pr.y);
+      g.rotate(p.rot);
+      g.globalAlpha=p.kind==='down'?a*0.7:a;
+      g.fillStyle=p.col;
+      if(p.kind==='down'){
+        g.beginPath(); g.arc(0,0,Math.max(1,sz*0.5),0,TAU); g.fill();
+      } else {
+        g.beginPath();
+        g.moveTo(-sz*0.5,0);
+        g.quadraticCurveTo(0,-sz*0.42,sz*0.62,-sz*0.06);
+        g.quadraticCurveTo(0,sz*0.30,-sz*0.5,0);
+        g.closePath(); g.fill();
+        g.strokeStyle='rgba(0,0,0,0.35)'; g.lineWidth=Math.max(0.6,sz*0.06);
+        g.beginPath(); g.moveTo(-sz*0.5,0); g.lineTo(sz*0.55,-sz*0.04); g.stroke();
+      }
+      g.restore();
+    }
+    g.globalAlpha=1;
+  },
+  puffs(){
+    const g=this.g;
+    for(const p of F.puffs){
+      const pr=this.proj(p.x,0.02,p.z);
+      const a=clamp(p.life/p.max,0,1)*0.22;
+      g.fillStyle='rgba(236,228,212,'+a+')';
+      g.beginPath(); g.arc(pr.x,pr.y,p.r*this.s,0,TAU); g.fill();
+    }
+  },
+
+  cullFx(){
+    const g=this.g, c=F.cull; if(!c) return;
+    if(c.stage>=1&&c.stage<3){
+      g.fillStyle='rgba(0,0,0,'+(0.12+c.stage*0.1)+')';
+      g.fillRect(0,0,this.W,this.H);
+      // red vignette closing
+      const vg=g.createRadialGradient(this.W/2,this.H/2,this.W*0.15,this.W/2,this.H/2,this.W*0.62);
+      vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(142,43,28,0.55)');
+      g.fillStyle=vg; g.fillRect(0,0,this.W,this.H);
+    }
+    if(c.stage===3){ g.fillStyle='#000'; g.fillRect(0,0,this.W,this.H); }
+  },
+
+  shade(hex,amt){
+    const c=hex.replace('#','');
+    const n=parseInt(c.length===3?c.split('').map(x=>x+x).join(''):c,16);
+    let r=(n>>16)&255,gg=(n>>8)&255,b=n&255;
+    if(amt>0){ r=r+(255-r)*amt; gg=gg+(255-gg)*amt; b=b+(255-b)*amt; }
+    else { r*=1+amt; gg*=1+amt; b*=1+amt; }
+    return `rgb(${r|0},${gg|0},${b|0})`;
+  },
+
+  /* ---------- title screen ---------- */
+  initTitle(){
+    this.tcv=$('#titleCv'); this.tg=this.tcv.getContext('2d');
+    this.resizeTitle();
+    this.titleLoop();
+  },
+  resizeTitle(){
+    if(!this.tcv) return;
+    const dpr=Math.min(window.devicePixelRatio||1,2);
+    const r=this.tcv.getBoundingClientRect();
+    this.tW=Math.max(320,r.width); this.tH=Math.max(240,r.height);
+    this.tcv.width=Math.round(this.tW*dpr); this.tcv.height=Math.round(this.tH*dpr);
+    this.tg.setTransform(dpr,0,0,dpr,0,0);
+  },
+  titleLoop(){
+    if(!this.tcv) return;
+    const g=this.tg;
+    const t=performance.now()/1000;
+    const W=this.tW,H=this.tH;
+    // backdrop
+    const gr=g.createLinearGradient(0,0,0,H);
+    gr.addColorStop(0,'#120d09'); gr.addColorStop(0.55,'#2a1a11'); gr.addColorStop(1,'#0b0a09');
+    g.fillStyle=gr; g.fillRect(0,0,W,H);
+    // haze light
+    const rg=g.createRadialGradient(W*0.62,H*0.42,10,W*0.62,H*0.42,W*0.55);
+    rg.addColorStop(0,'rgba(242,167,27,0.16)'); rg.addColorStop(1,'rgba(0,0,0,0)');
+    g.fillStyle=rg; g.fillRect(0,0,W,H);
+    // ground
+    g.fillStyle='#0d0a08'; g.fillRect(0,H*0.78,W,H*0.22);
+    g.strokeStyle='rgba(236,228,212,0.08)'; g.lineWidth=1;
+    g.beginPath(); g.moveTo(0,H*0.78); g.lineTo(W,H*0.78); g.stroke();
+
+    // two birds in the dust, behind the type
+    const bh=Math.min(W*0.26,H*0.52);
+    const drawSil=(x,flip,breed,alpha)=>{
+      g.save();
+      g.translate(x,H*0.845);
+      g.scale(flip*bh*0.62,bh*0.62);
+      const fake={breed,state:'idle',breath:t*1.3+(flip>0?1:0),walkPhase:0,mt:0,dur:1,scale:1,
+        surge:'none',band:0,hurt:0,flash:0,stun:0,facing:flip,isP:flip<0,bird:{stage:5},mv:null,
+        addons:[],bodyScale:1};
+      g.globalAlpha=alpha;
+      this.drawBirdBody(fake,g);
+      g.restore();
+    };
+    drawSil(W*0.155,1,BREED.aseel,0.72);
+    drawSil(W*0.855,-1,BREED.shamo,0.62);
+    // warm rim so the silhouettes read against the haze
+    const rim=g.createLinearGradient(0,H*0.45,0,H);
+    rim.addColorStop(0,'rgba(242,167,27,0.10)');
+    rim.addColorStop(1,'rgba(0,0,0,0)');
+    g.fillStyle=rim; g.fillRect(0,H*0.45,W,H*0.55);
+
+    // drifting feathers
+    for(let i=0;i<16;i++){
+      const seed=i*97.13;
+      const px=((seed*13+t*18+Math.sin(t*0.7+i)*40)%(W+120))-60;
+      const py=((seed*7+t*26)%(H+80))-40;
+      g.save(); g.translate(px,py); g.rotate(t*0.6+i);
+      g.globalAlpha=0.12+((i*13)%10)/70;
+      g.fillStyle='#e8dcc4';
+      g.beginPath(); g.ellipse(0,0,7,2.4,0,0,TAU); g.fill();
+      g.restore();
+    }
+    g.globalAlpha=1;
+    requestAnimationFrame(()=>{ if($('#scr-title').classList.contains('on')) this.titleLoop(); });
+  },
+};
+
+/* ---------------------------------------------------------------------------
+   6. UI — coop, circuit, pre-fight, bout HUD, resolve
+   ------------------------------------------------------------------------ */
+const UI={
+  screen:'title', pendingArena:1, opp:null, cullBird:null,
+
+  go(name){
+    this.screen=name;
+    $$('.screen').forEach(s=>s.classList.remove('on'));
+    const s=$('#scr-'+name); if(s) s.classList.add('on');
+    if(name==='coop') this.renderCoop();
+    if(name==='circuit') this.renderCircuit();
+    if(name==='roster') this.renderRoster();
+    if(name==='title'){ if(R.tcv) R.titleLoop(); this.renderTitleMeta(); }
+    if(name==='bout'){ setTimeout(()=>{ R.resizeBout(); checkOrient(); },60); }
+    if(name==='prefight') this.renderPrefight();
+    save();
+  },
+
+  /* ---------- title ---------- */
+  renderTitleMeta(){
+    const t=$('#titleSave');
+    if(t) t.textContent = S && S.birds.length ? `${S.birds.length} bird${S.birds.length===1?'':'s'} · arena ${S.unlocked} of 6 · ${S.coin} coin` : 'no circuit saved';
+    $('#btnContinue').style.display = (S&&S.birds.length)?'':'none';
+  },
+
+  /* ---------- coop ---------- */
+  renderCoop(){
+    const b=curBird();
+    $('#coinVal').textContent=fmt(S.coin);
+    $('#feedVal').textContent=S.feed;
+    $('#waterVal').textContent=S.water;
+    $('#coopSub').textContent=`Pens ${S.stations.pens} · incubator ${S.stations.incubator} · ${S.bouts} bout${S.bouts===1?'':'s'} run`;
+    $('#flockCount').textContent=S.birds.length+(S.birds.length===1?' bird':' birds');
+
+    if(!b){
+      $('#selName').textContent='No birds';
+      $('#selStage').textContent='—';
+      $('#selBreed').textContent='Hatch a legacy egg in the tray';
+      $('#selTags').innerHTML='<span class="pill">the coop is quiet</span>';
+      ['#sPow','#sRea','#sAgi','#sCon','#vFood','#vWater','#vRest','#vGrowF','#vGrowS'].forEach(x=>{ if($(x)) $(x).textContent='—'; });
+      ['#mFood','#mWater','#mRest','#mGrowF','#mGrowS'].forEach(x=>setMeter(x,0));
+      $('#growthTxt').textContent='—';
+      this.renderBirdList(); this.renderStations();
+      return;
+    }
+    if(b){
+      $('#selName').textContent=b.name;
+      $('#selStage').textContent=STAGES[b.stage].n;
+      $('#selBreed').textContent=`${b.breed.n} · ${b.breed.cls} · ${b.breed.arch}`;
+      const st=breedStats(b);
+      $('#sPow').textContent=st.pow; $('#sRea').textContent=st.rea;
+      $('#sAgi').textContent=st.agi; $('#sCon').textContent=st.con;
+      setMeter('#mFood',b.food); setMeter('#mWater',b.water); setMeter('#mRest',b.rest);
+      $('#vFood').textContent=Math.round(b.food); $('#vWater').textContent=Math.round(b.water); $('#vRest').textContent=Math.round(b.rest);
+      const nx=STAGES[Math.min(STAGES.length-1,b.stage+1)];
+      const pct=(v,m)=>clamp(v/m*100,0,100);
+      setMeter('#mGrowF',b.stage>=6?100:pct(b.feed,nx.feed));
+      setMeter('#mGrowS',b.stage>=6?100:pct(b.score,nx.score));
+      $('#vGrowF').textContent=b.stage>=6?'—':Math.round(b.feed)+'/'+nx.feed;
+      $('#vGrowS').textContent=b.stage>=6?'—':Math.round(b.score)+'/'+nx.score;
+      $('#growthTxt').textContent=canEvolve(b)?'READY TO GROW':(b.stage>=6?'PRIME':nx.n.toUpperCase()+' NEXT');
+      const tags=[];
+      tags.push(`<span class="pill">${b.breed.cls}</span>`);
+      tags.push(`<span class="pill">${b.breed.arch}</span>`);
+      tags.push(`<span class="pill">${massOf(b).toFixed(2)} kg</span>`);
+      const bd=bandOfBird(b);
+      tags.push(`<span class="pill ${bd>=4?'':'amber'}">${BANDS[bd].lbl}</span>`);
+      if(b.loadout.length) tags.push(`<span class="pill">${b.loadout.length} addon${b.loadout.length>1?'s':''}</span>`);
+      $('#selTags').innerHTML=tags.join('');
+    }
+    this.renderBirdList();
+    this.renderStations();
+  },
+
+  renderBirdList(){
+    const wrap=$('#birdList'); if(!wrap) return;
+    wrap.innerHTML='';
+    S.birds.forEach((b,i)=>{
+      const d=el('div','bird-card'+(i===S.sel?' sel':''));
+      d.innerHTML=`
+        <div class="av" style="font-family:var(--disp);font-size:24px;color:${b.breed.pal.hackle}">${esc(b.name.charAt(0))}</div>
+        <div style="flex:1;min-width:0">
+          <div class="nm">${esc(b.name)}</div>
+          <div class="br">${b.breed.n} · ${STAGES[b.stage].n}</div>
+          <div style="display:flex;gap:6px;margin-top:6px;font-family:var(--mono);font-size:9px;color:var(--bone-3)">
+            <span>F ${Math.round(b.food)}</span><span>W ${Math.round(b.water)}</span><span>R ${Math.round(b.rest)}</span>
+            <span style="margin-left:auto;color:var(--amber)">${Math.round(b.score)} sc</span>
+          </div>
+        </div>`;
+      on(d,'click',()=>{ S.sel=i; this.renderCoop(); sfx('ui'); });
+      wrap.appendChild(d);
+    });
+    if(!S.birds.length) wrap.innerHTML='<p class="dim" style="font-size:12px">No birds. Hatch one in the incubator.</p>';
+  },
+
+  renderStations(){
+    const g=$('#stationGrid'); if(!g) return;
+    const st=S.stations;
+    const cards=[
+      {k:'pens', ico:'fa-house-chimney', n:'Pens', lvl:`${st.pens}/12`,
+       desc:`Houses resting birds. Each extra pen cuts rest time by 4 percent.`,
+       cost: 260*st.pens, act:()=>{ st.pens++; }},
+      {k:'incubator', ico:'fa-egg', n:'Incubator', lvl:`${st.incubator}/3`,
+       desc:`Turns an egg into a hatchling over a timer. ${S.eggs.length} egg(s) in the tray.`,
+       cost: 600, act:()=>{ st.incubator++; }},
+      {k:'silo', ico:'fa-wheat-awn', n:'Feed silo', lvl:`L${st.silo}`,
+       desc:`Holds feed units. 5 percent bulk discount per level. Capacity ${40*st.silo}.`,
+       cost: 320*st.silo, act:()=>{ st.silo++; }},
+      {k:'tank', ico:'fa-droplet', n:'Water tank', lvl:`L${st.tank}`,
+       desc:`Holds water. Adds a cooling loop that halves heat drain. Capacity ${40*st.tank}.`,
+       cost: 400, act:()=>{ st.tank++; }},
+      {k:'med', ico:'fa-kit-medical', n:'Med bay', lvl:st.med?`L${st.med}`:'—',
+       desc:`Treats injury and fatigue after a bout. Shortens treatment, prevents one scar.`,
+       cost: st.med?700*st.med:900, act:()=>{ st.med=st.med||1; }},
+      {k:'yard', ico:'fa-dumbbell', n:'Training yard', lvl:st.yard?`L${st.yard}`:'—',
+       desc:`Spends feed to raise a stat between bouts. Adds a second training slot.`,
+       cost: st.yard?1000*st.yard:1200, act:()=>{ st.yard=st.yard||1; }},
+    ];
+    g.innerHTML='';
+    cards.forEach(c=>{
+      const maxed=(c.k==='pens'&&st.pens>=12)||(c.k==='incubator'&&st.incubator>=3);
+      const d=el('div','station');
+      d.innerHTML=`
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="st-ico"><i class="fa-solid ${c.ico}"></i></span>
+          <h4>${c.n}</h4>
+        </div>
+        <span class="lvl">${c.lvl}</span>
+        <p>${c.desc}</p>
+        <div class="st-row">
+          <button class="btn sm ${maxed?'':'solid'}" ${maxed?'disabled':''}>
+            ${maxed?'MAX':`Build · ${fmt(c.cost)}`}
+          </button>
+        </div>`;
+      const btn=d.querySelector('button');
+      on(btn,'click',()=>{
+        if(maxed) return;
+        if(S.coin<c.cost){ toast('Not enough coin'); return; }
+        S.coin-=c.cost; c.act(); sfx('ui'); save(); this.renderCoop();
+        toast(c.n+' upgraded');
+      });
+      g.appendChild(d);
+    });
+    // buy feed / water
+    const buy=el('div','station');
+    buy.innerHTML=`
+      <div style="display:flex;align-items:center;gap:8px"><span class="st-ico"><i class="fa-solid fa-basket-shopping"></i></span><h4>Poultry services</h4></div>
+      <p>Feed ${S.feed}/${40*st.silo} · Water ${S.water}/${40*st.tank}. Coin is earned only from bouts and story beats.</p>
+      <div class="st-row">
+        <button class="btn sm" id="buyFeed">+10 feed · ${Math.round(100*Math.pow(0.95,st.silo-1))}</button>
+        <button class="btn sm" id="buyWater">+10 water · 70</button>
+      </div>`;
+    g.appendChild(buy);
+    on($('#buyFeed'),'click',()=>{
+      const c=Math.round(100*Math.pow(0.95,st.silo-1));
+      if(S.coin<c) return toast('Not enough coin');
+      if(S.feed>=40*st.silo) return toast('Silo is full');
+      S.coin-=c; S.feed=Math.min(40*st.silo,S.feed+10); sfx('ui'); save(); this.renderCoop();
+    });
+    on($('#buyWater'),'click',()=>{
+      if(S.coin<70) return toast('Not enough coin');
+      if(S.water>=40*st.tank) return toast('Tank is full');
+      S.coin-=70; S.water=Math.min(40*st.tank,S.water+10); sfx('ui'); save(); this.renderCoop();
+    });
+    // incubator tray
+    const tray=el('div','station');
+    const eggRows=S.eggs.map((e,i)=>{
+      const br=BREED[e.breedId];
+      const ready=e.left<=0;
+      return `<div style="display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10px;margin-top:6px;flex-wrap:wrap">
+        <span style="width:8px;height:11px;background:${br.pal.hackle};border-radius:50% 50% 45% 45%;flex-shrink:0"></span>
+        <span style="flex:1;min-width:90px">${br.n}<br><span class="dim">${br.cls}</span></span>
+        <span class="dim" style="font-size:9px">${ready?'ready':e.left+' bout'+(e.left>1?'s':'')}</span>
+        <button class="btn sm ${ready?'amber':''}" data-hatch="${i}">${ready?'Hatch':'Rush · 1 feed'}</button>
+      </div>`;
+    }).join('')||'<p style="font-size:11px;color:var(--bone-3)">Tray empty. Buy an egg or let a hen lay one.</p>';
+    tray.innerHTML=`
+      <div style="display:flex;align-items:center;gap:8px"><span class="st-ico"><i class="fa-solid fa-egg"></i></span><h4>Egg tray</h4></div>
+      <p>${S.stations.incubator} slot(s). A hatch is a roll, not a gift.</p>
+      <div class="st-row" style="flex-direction:column;align-items:stretch">${eggRows}</div>
+      <div class="st-row"><button class="btn sm" id="buyEgg">Buy egg · 200</button></div>`;
+    g.appendChild(tray);
+    $$('[data-hatch]',tray).forEach(btn=>{
+      on(btn,'click',()=>{
+        const i=+btn.dataset.hatch, e=S.eggs[i];
+        if(!e) return;
+        if(e.left>0){
+          if(S.feed<1) return toast('No feed to rush with');
+          S.feed--; e.left--;
+          if(e.left>0) return this.renderCoop();
+        }
+        this.hatch(i);
+      });
+    });
+    const be=$('#buyEgg');
+    if(be) on(be,'click',()=>{
+      if(S.coin<200) return toast('Not enough coin');
+      if(S.eggs.length>=S.stations.incubator) return toast('Incubator is full');
+      S.coin-=200;
+      const pool=BREEDS.filter(b=>b.cls!=='Bantam');
+      S.eggs.push({breedId:pick(pool).id,left:1,genes:[ri(1,9),ri(1,9),ri(1,9)]});
+      sfx('ui'); save(); this.renderCoop();
+    });
+  },
+
+  hatch(i){
+    const e=S.eggs.splice(i,1)[0]; if(!e) return;
+    const b=newBird(e.breedId,1);
+    b.name=nameBird();
+    // gene roll: three hidden genes colour the read
+    const genes=e.genes||[ri(1,9),ri(1,9),ri(1,9)];
+    const bonus=Math.round((genes[0]+genes[1]+genes[2])/9)-1;
+    if(bonus>0){
+      const k=pick(['pow','rea','agi','con']);
+      b.trains[k]+=bonus;
+    }
+    S.birds.push(b); S.sel=S.birds.length-1;
+    const br=BREED[b.breedId];
+    const grade=v=> v>=8?'strong':v>=5?'sound':'thin';
+    $('#hatchTitle').textContent='It hatched';
+    $('#hatchBody').innerHTML=`
+      <div style="display:flex;gap:16px;align-items:center;margin-bottom:14px">
+        <div style="width:64px;height:64px;border:1px solid var(--line);display:grid;place-items:center;background:radial-gradient(circle,rgba(242,167,27,.15),transparent 70%)">
+          <i class="fa-solid fa-dove" style="font-size:26px;color:${br.pal.hackle}"></i></div>
+        <div><div style="font-family:var(--cond);font-size:22px;letter-spacing:.08em">${esc(b.name)}</div>
+        <div class="mono dim" style="font-size:10px">${br.n} · ${br.cls} · ${br.arch}</div></div>
+      </div>
+      <div class="mono" style="font-size:11px;line-height:2">
+        <div>Gene read · <span style="color:var(--jade)">${grade(genes[0])}</span> / <span style="color:var(--amber)">${grade(genes[1])}</span> / <span style="color:#5d84a8">${grade(genes[2])}</span></div>
+        <div class="dim">${br.hook}</div>
+      </div>`;
+    show('mHatch'); sfx('ui'); save();
+  },
+
+  /* ---------- roster ---------- */
+  renderRoster(){
+    const g=$('#rosterBody'); if(!g) return;
+    $('#rosterWins').textContent=S.wins;
+    g.innerHTML='';
+    S.birds.forEach(b=>{
+      const st=breedStats(b);
+      const d=el('div','panel');
+      d.innerHTML=`
+        <div class="panel-hd"><h3 style="font-size:20px">${esc(b.name)}</h3><span class="pill amber">${STAGES[b.stage].n}</span></div>
+        <div class="mono dim" style="font-size:9.5px;letter-spacing:.12em;margin-bottom:8px">${b.breed.n} · ${b.breed.cls} · ${b.breed.arch} · ${massOf(b).toFixed(2)} kg</div>
+        <div class="mono" style="font-size:10px;line-height:1.9">
+          <div>P ${st.pow} · R ${st.rea} · A ${st.agi} · C ${st.con}</div>
+          <div class="dim">Food ${Math.round(b.food)} · Water ${Math.round(b.water)} · Rest ${Math.round(b.rest)}</div>
+          <div class="dim">Score ${Math.round(b.score)} · ${b.wins}/${b.fights} bouts</div>
+          <div class="dim">${b.loadout.length?b.loadout.map(id=>ADDON[id]?ADDON[id].n:id).join(', '):'no addons fitted'}</div>
+        </div>`;
+      g.appendChild(d);
+    });
+    if(!S.birds.length) g.innerHTML='<p class="dim" style="font-size:12px">No birds on the roster.</p>';
+    const t=$('#trophyBody'); t.innerHTML='';
+    S.culled.forEach(c=>{
+      const d=el('div','panel');
+      d.innerHTML=`
+        <div class="mono dim" style="font-size:9px;letter-spacing:.2em">CULLED · ARENA ${c.arena}</div>
+        <div style="font-family:var(--cond);font-size:19px;letter-spacing:.07em;margin-top:4px">${esc(c.name)}</div>
+        <div class="mono dim" style="font-size:10px;margin-top:4px">${c.breed} · ${c.stage} · score ${Math.round(c.score)}</div>`;
+      t.appendChild(d);
+    });
+    if(!S.culled.length) t.innerHTML='<p class="dim" style="font-size:12px">The wall is empty. Keep it that way.</p>';
+  },
+
+  /* ---------- circuit ---------- */
+  renderCircuit(){
+    const g=$('#arenaGrid'); if(!g) return;
+    $('#circSub').textContent=`${S.unlocked} of 6 arenas open · ${S.wins} win${S.wins===1?'':'s'}`;
+    $('#noteCount').textContent=S.notes.length+'/40';
+    g.innerHTML='';
+    ARENAS.forEach((a,i)=>{
+      const locked=a.n>S.unlocked;
+      const d=el('div','arena-card'+(locked?' locked':''));
+      d.innerHTML=`
+        <div class="swatch" style="background:linear-gradient(140deg,${a.sw[0]},${a.sw[1]} 55%,${a.sw[2]})"></div>
+        <div class="veil"></div>
+        <div class="no">0${a.n}</div>
+        <div class="place">${a.place}</div>
+        <h4>${a.name}</h4>
+        <div class="rule">${a.rule}</div>
+        <div class="mono" style="font-size:9px;letter-spacing:.16em;color:rgba(236,228,212,.5);margin-top:6px">
+          ${locked?'LOCKED':(a.cull?'RANKED · CULL ARMED':'UNRANKED · NO CULL')}</div>`;
+      if(!locked) on(d,'click',()=>{ this.pendingArena=a.n; this.opp=makeOpponent(a.n); this.go('prefight'); sfx('ui'); });
+      else on(d,'click',()=>toast('Win arena '+S.unlocked+' to open this one'));
+      g.appendChild(d);
+    });
+  },
+
+  /* ---------- pre-fight ---------- */
+  renderPrefight(){
+    const a=ARENAS[this.pendingArena-1];
+    const b=curBird();
+    $('#pfArena').textContent=a.name.toUpperCase();
+    $('#pfRule').textContent=a.place+' · arena '+a.n;
+    $('#rankTxt').textContent=(S.ranked&&!S.opts.assist)?'RANKED':'UNRANKED';
+    if(!b){ this.go('coop'); return; }
+    const o=this.opp;
+    const pAdv=canEvolve(b);
+    $('#pfCard').innerHTML=`
+      <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center">
+        <div>
+          <div class="mono dim" style="font-size:9px;letter-spacing:.18em">YOUR BIRD</div>
+          <div style="font-family:var(--cond);font-size:19px;letter-spacing:.06em">${esc(b.name)}</div>
+          <div class="mono dim" style="font-size:10px">${b.breed.n} · ${STAGES[b.stage].n}</div>
+          <div class="mono" style="font-size:10px;color:var(--amber);margin-top:4px">${Math.round(b.score)} sc · ${outputOf(b).toFixed(2)}× output</div>
+        </div>
+        <div class="vs">VS</div>
+        <div style="text-align:right">
+          <div class="mono dim" style="font-size:9px;letter-spacing:.18em">ACROSS THE MAT</div>
+          <div style="font-family:var(--cond);font-size:19px;letter-spacing:.06em">${esc(o.name)}</div>
+          <div class="mono dim" style="font-size:10px">${o.breed.n} · ${STAGES[o.stage].n}</div>
+          <div class="mono" style="font-size:10px;color:var(--amber);margin-top:4px">${Math.round(o.score)} sc · AI ${AI_LADDER[clamp(a.ai-1,0,3)].n}</div>
+        </div>
+      </div>`;
+    // forecast
+    const heat=a.heat?1.4:1;
+    const per=[4,5*heat,2];
+    const restMul=1+massOf(b)/2;
+    let f=b.food,w=b.water,r=b.rest;
+    let rows='';
+    for(let i=1;i<=3;i++){
+      f=Math.max(0,f-per[0]); w=Math.max(0,w-per[1]); r=Math.max(0,r-per[2]*restMul);
+      const out=outputOf({food:f,water:w,rest:r});
+      const bd=bandOf(Math.min(f,w,r));
+      rows+=`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line)">
+        <span class="dim">Round ${i}</span>
+        <span>F ${f.toFixed(0)} W ${w.toFixed(0)} R ${r.toFixed(0)}</span>
+        <span style="color:${bd>=3?'var(--blood)':'var(--jade)'}">${out.toFixed(2)}× ${BANDS[bd].lbl}</span></div>`;
+    }
+    $('#pfForecast').innerHTML=`
+      <div class="dim" style="font-size:9.5px;letter-spacing:.14em;margin-bottom:6px">IF YOU FIGHT ALL THREE ROUNDS</div>
+      ${rows}
+      <div style="margin-top:10px;font-size:10px;color:var(--bone-3);line-height:1.7">
+        Output is a weighted geometric mean: (food)^.35 × (water)^.30 × (rest)^.35.
+        One bad meter hurts without being fatal.
+      </div>`;
+    // corner bag
+    const cb=$('#cornerBag'); cb.innerHTML='';
+    CORNER.forEach(c=>{
+      const d=el('div','corner-item'+(S.corner===c.id?' sel':''));
+      d.innerHTML=`<span>${c.n}</span><span class="dim" style="font-size:10px">${c.desc}</span>`;
+      on(d,'click',()=>{ S.corner=c.id; this.renderPrefight(); sfx('ui'); });
+      cb.appendChild(d);
+    });
+    // rules
+    const cullPossible=S.ranked&&a.cull;
+    $('#pfRules').innerHTML=`
+      <div><b style="color:var(--bone)">${a.rule}</b></div>
+      <div style="margin-top:8px">Best of three 45-second rounds. Rounds end on knockout, on time with the higher vitality, or on a double knockdown (a draw).</div>
+      <div style="margin-top:8px">The wall adds 15% to any hit that lands against it and pins the bird for 6 ticks. Corners are good for the attacker and bad for the defender.</div>
+      <div style="margin-top:8px">Five unanswered hits makes the Surge available: six seconds of power, then three and a half seconds of helplessness.</div>
+      ${cullPossible?`<div style="margin-top:8px;color:#e8a89c">Ranked. Lose every round, finish under 10% dealt while the opponent keeps 90% of its vitality, and the Cull fires.</div>`
+        :`<div style="margin-top:8px;color:var(--jade)">Unranked or first arena: the Cull cannot fire.</div>`}`;
+    const warn=$('#pfWarning');
+    if(cullPossible){
+      warn.style.display='block';
+      warn.innerHTML='<b>The Cull is armed.</b> This bout is ranked. A collapse takes the bird permanently — it leaves a Legacy Egg at 70% of its trained stats, and nothing else.';
+    } else warn.style.display='none';
+    if(pAdv) toast('This bird can evolve — check the coop');
+  },
+
+  /* ---------- bout ---------- */
+  startBoutUI(){
+    const p=F.p,o=F.o;
+    $('#hpName').textContent=p.name.toUpperCase();
+    $('#hpSub').textContent=`${p.breed.n} · ${p.breed.arch} · ${p.mass.toFixed(2)} kg`;
+    $('#hoName').textContent=o.name.toUpperCase();
+    $('#hoSub').textContent=`${o.breed.n} · ${o.breed.arch} · ${o.mass.toFixed(2)} kg`;
+    $('#roundPips').innerHTML='<b></b><b></b><b></b>';
+    $('#cullOv').classList.remove('on');
+    this.hud();
+  },
+  announce(txt,ticks){
+    const a=$('#annTxt'); if(!a) return;
+    a.textContent=txt; a.classList.remove('hide'); a.classList.add('show');
+    clearTimeout(this._annT);
+    if(ticks>0) this._annT=setTimeout(()=>this.clearAnnounce(), ticks*16.6);
+  },
+  clearAnnounce(){
+    const a=$('#annTxt'); if(!a) return;
+    a.classList.remove('show'); a.classList.add('hide');
+  },
+  fightStart(){ this.clearAnnounce(); },
+  roundStart(){},
+  roundEnd(){
+    const a=$('#annTxt');
+    if(a){
+      a.textContent=F.roundWinner==='p'?'ROUND':(F.roundWinner==='o'?'ROUND':'DRAW');
+      a.classList.remove('hide'); a.classList.add('show');
+    }
+  },
+
+  hud(){
+    if(!F.p) return;
+    const p=F.p,o=F.o;
+    const setVit=(id,f)=>{
+      const el2=$(id); const pct=clamp(f.hp/f.maxHp,0,1);
+      el2.querySelector('.fill').style.transform='scaleX('+pct+')';
+      el2.querySelector('.trail').style.transform='scaleX('+pct+')';
+      el2.classList.toggle('low',pct<0.3);
+    };
+    setVit('#vitP',p); setVit('#vitO',o);
+    const pip=(id,v)=>{
+      const e=$(id); if(!e) return;
+      e.querySelector('i').style.right=(100-clamp(v,0,100))+'%';
+      e.classList.toggle('crit',v<25);
+    };
+    pip('#pipF',p.cond.food); pip('#pipW',p.cond.water); pip('#pipR',p.cond.rest);
+    pip('#pipOF',o.cond.food); pip('#pipOW',o.cond.water); pip('#pipOR',o.cond.rest);
+    $('#clock').textContent=Math.max(0,Math.ceil(F.timer/TPS));
+    const pi=$('#roundPips');
+    pi.innerHTML='';
+    for(let i=0;i<3;i++){
+      const b=document.createElement('b');
+      if(i<F.winsP) b.className='won';
+      pi.appendChild(b);
+    }
+    const sc=$('#surgeIcon');
+    sc.classList.toggle('ready',p.surge==='ready');
+    sc.classList.toggle('on',p.surge==='on');
+    const st=$('#streakP');
+    $$('i',st).forEach((d,i)=>d.classList.toggle('on',i<p.streak));
+  },
+
+  matchEnd(){
+    const r=F.result;
+    setTimeout(()=>{ if(F.phase==='matchend'||F.phase==='cull') this.resolve(r); },1400);
+  },
+  cullStart(){
+    const b=F.birdRef;
+    this.cullBird=b;
+    setTimeout(()=>{
+      $('#cullBody').innerHTML=
+        `The referee steps back. <b style="color:var(--bone)">${esc(b.name)}</b> is taken, and the winner grows —
+         which the rules board has never explained. The camera cuts away before contact.`;
+      $('#cullOv').classList.add('on');
+      F.paused=true;
+    },1500);
+  },
+  cullBlack(){ F.dil=1; },
+  cullAck(){
+    $('#cullOv').classList.remove('on');
+    this.resolve(F.result);
+  },
+
+  /* ---------- resolve ---------- */
+  resolve(r){
+    if(!r) r=F.result||{won:false,roundsP:0,roundsO:0,cull:false,arena:1};
+    F.paused=true;
+    const b=F.birdRef, arena=F.arena;
+    const won=r.won;
+    // one economy, two rooms: what the bout drained is what the coop now has
+    const before={food:b.food, water:b.water, rest:b.rest};
+    if(F.p){ b.food=F.p.cond.food; b.water=F.p.cond.water; b.rest=F.p.cond.rest; }
+    // survival score (demo pace)
+    const dScore = won?40:(r.roundsP>0?15:-30);
+    b.score=Math.max(0,b.score+dScore);
+    b.fights=(b.fights||0)+1;
+    if(won) b.wins=(b.wins||0)+1;
+    // coin
+    const coin = won? (120+arena.n*45) : 40;
+    S.coin+=coin;
+    S.bouts++;
+    if(won){ S.wins++; if(S.unlocked<arena.n+1 && arena.n<6) S.unlocked=arena.n+1; }
+
+    // field notes on a clear
+    let newNotes=[];
+    if(won){
+      const start=(arena.n-1)*7, end=Math.min(40,start+3);
+      for(let i=start;i<end;i++){
+        if(S.notes.indexOf(i)<0){ S.notes.push(i); newNotes.push(i); }
+      }
+    }
+    // eggs laid every third bout
+    if(S.bouts%3===0 && S.eggs.length<S.stations.incubator){
+      const pool=BREEDS.filter(x=>x.cls!=='Bantam');
+      S.eggs.push({breedId:pick(pool).id,left:1,genes:[ri(1,9),ri(1,9),ri(1,9)]});
+    }
+    S.eggs.forEach(e=>{ if(e.left>0) e.left--; });
+
+    // Cull
+    let culled=false;
+    if(r.cull){
+      culled=true;
+      S.culls++;
+      S.culled.push({name:b.name,breed:b.breed.n,stage:STAGES[b.stage].n,score:b.score,arena:arena.n});
+      const idx=S.birds.indexOf(b);
+      if(idx>=0) S.birds.splice(idx,1);
+      // legacy egg: 70% of trained stats, breed, one random upgrade
+      const egg={breedId:b.breedId,left:2,genes:[ri(1,9),ri(1,9),ri(1,9)],legacy:true,
+        trains:Object.fromEntries(Object.entries(b.trains||{}).map(([k,v])=>[k,Math.round(v*0.7)])),
+        addon:pick(ADDONS).id};
+      S.eggs.push(egg);
+      S.sel=0;
+    }
+
+    // evolution check
+    let evolved=null;
+    if(!culled && canEvolve(b)){ b.stage++; evolved=STAGES[b.stage].n; }
+
+    // screen
+    $('#rsKicker').textContent=`arena ${arena.n} · ${arena.name} · ${S.ranked?'ranked':'unranked'}`;
+    $('#rsTitle').textContent=culled?'CULLED':(won?'BOUT WON':'BOUT LOST');
+    $('#rsTitle').style.color=culled?'#c25a44':(won?'var(--bone)':'#b9ae99');
+    $('#rsSub').textContent=culled
+      ? `${b.name} is taken. A Legacy Egg waits in the incubator.`
+      : `${r.roundsP} – ${r.roundsO} · ${won?'the circuit moves':'the circuit holds'}`;
+    $('#rsCost').innerHTML=`
+      <div style="display:flex;justify-content:space-between"><span class="dim">Food consumed</span><span>−${Math.max(0,before.food-b.food).toFixed(0)} → ${Math.round(b.food)}</span></div>
+      <div style="display:flex;justify-content:space-between"><span class="dim">Water consumed</span><span>−${Math.max(0,before.water-b.water).toFixed(0)} → ${Math.round(b.water)}</span></div>
+      <div style="display:flex;justify-content:space-between"><span class="dim">Rest spent</span><span>−${Math.max(0,before.rest-b.rest).toFixed(0)} → ${Math.round(b.rest)}</span></div>
+      <div style="display:flex;justify-content:space-between"><span class="dim">Feathers shed</span><span>${F.shed||0} off the bird</span></div>
+      <div style="display:flex;justify-content:space-between"><span class="dim">Damage dealt</span><span>${Math.round(b.fights?F.p.damageDealt:0)}</span></div>`;
+    $('#rsScore').textContent=(dScore>0?'+':'')+dScore;
+    $('#rsScore').style.color=dScore>0?'var(--jade)':'#c25a44';
+    $('#rsCoin').textContent='+'+coin;
+    let extra='';
+    if(evolved) extra+=`<div class="note"><div class="nh"><span>GROWTH</span></div><div class="nt">${b.name} is now ${evolved}</div><div class="nb">Both gates were met and the lower one won. Scale, feather count and idle set have changed.</div></div>`;
+    if(newNotes.length){
+      extra+=`<div class="note"><div class="nh"><span>FIELD NOTES</span><span>${newNotes.length} recovered</span></div>
+        <div class="nt">${esc(NOTES[newNotes[0]][0])}</div>
+        <div class="nb">${esc(NOTES[newNotes[0]][2])}</div></div>`;
+    }
+    if(culled) extra+=`<div class="note"><div class="nh"><span>LEGACY EGG</span></div><div class="nt">70 percent, and one upgrade</div>
+      <div class="nb">The descendant keeps the breed, seven tenths of what the bird learned, and one addon at random. It has to be raised again.</div></div>`;
+    $('#rsNotes').innerHTML=extra;
+    this.go('resolve');
+    save();
+  },
+
+  /* ---------- modals ---------- */
+  notes(){
+    const g=$('#notesBody'); if(!g) return;
+    $('#notesCount2').textContent=S.notes.length+' / 40';
+    g.innerHTML='';
+    NOTES.forEach((n,i)=>{
+      const got=S.notes.indexOf(i)>=0;
+      const d=el('div','note'+(got?'':' locked'));
+      d.innerHTML=`<div class="nh"><span>Note ${String(i+1).padStart(2,'0')} · arena ${Math.min(6,Math.floor(i/7)+1)}</span><span>${got?'recovered':'not found'}</span></div>
+        <div class="nt">${got?esc(n[0]):'— — —'}</div>
+        <div class="nb">${got?esc(n[2]):'A note you have not found yet. Clear arenas to recover them.'}</div>`;
+      g.appendChild(d);
+    });
+    show('mNotes');
+  },
+  settings(){
+    const g=$('#settingsBody'); if(!g) return;
+    const o=S.opts;
+    const sw=(id,label,val)=>`<div class="row"><div class="rl">${label}</div><div class="switch ${val?'on':''}" data-sw="${id}"><i></i></div></div>`;
+    const sl=(id,label,val,min,max,step)=>`<div class="row"><div class="rl">${label}</div>
+      <div style="display:flex;align-items:center;gap:10px">
+      <input type="range" min="${min}" max="${max}" step="${step||0.05}" value="${val}" data-sl="${id}">
+      <span class="mono" style="font-size:10px;width:34px;text-align:right" id="sl-${id}">${Math.round(val*100)}%</span></div></div>`;
+    g.innerHTML=`
+      <div class="kicker" style="margin-bottom:8px">accessibility — the three effects that sell impact</div>
+      ${sw('rm','Reduced motion (zeroes shake, blur and hitstop)',o.rm)}
+      ${sl('shake','Screen shake',o.shake)}
+      ${sl('hitstop','Hitstop scale',o.hitstop,0,1.5)}
+      ${sl('blur','Motion blur',o.blur)}
+      ${sw('flash','Flash reduction',o.flash)}
+      <div class="row"><div class="rl">Input buffer</div>
+        <div style="display:flex;gap:6px">${[2,4,6,8].map(v=>`<button class="btn sm ${o.buf===v?'solid':''}" data-buf="${v}">${v}</button>`).join('')}</div></div>
+      ${sw('assist','Assist mode (AI damage −20%, your vitality +20%, bouts unranked)',o.assist)}
+      <div class="hr"></div>
+      <div class="kicker" style="margin-bottom:8px">audio &amp; platform</div>
+      ${sw('sfx','Sound (generated, no assets)',o.sfx)}
+      ${sw('touch','On-screen touch controls',o.touch!==false&&isTouch())}
+      <div class="row"><div class="rl">Combat tick</div><div class="rr">60 Hz fixed · never scaled</div></div>
+      <div class="row"><div class="rl">Save</div><div class="rr">local, offline-first</div></div>`;
+    $$('[data-sw]',g).forEach(d=>on(d,'click',()=>{
+      const k=d.dataset.sw; o[k]=!o[k];
+      if(k==='rm'&&o.rm){ o.shake=0;o.hitstop=0;o.blur=0; }
+      document.body.classList.toggle('rm',o.rm);
+      if(k==='touch') $('#touch').classList.toggle('on',o.touch);
+      save(); this.settings(); sfx('ui');
+    }));
+    $$('[data-sl]',g).forEach(d=>on(d,'input',()=>{
+      const k=d.dataset.sl; o[k]=parseFloat(d.value);
+      $('#sl-'+k).textContent=Math.round(o[k]*100)+'%'; save();
+    }));
+    $$('[data-buf]',g).forEach(d=>on(d,'click',()=>{ o.buf=+d.dataset.buf; save(); this.settings(); }));
+    show('mSettings');
+  },
+  credits(){
+    $('#creditsBody').innerHTML=`
+      <p style="font-size:12.5px;line-height:1.75;color:var(--bone-2);font-weight:300;margin-top:0">
+      Gallus presents its bouts as a fictional regulated sport: referees, weight classes, rounds, a rules board,
+      medical checks between bouts, and steel spur guards rather than blades. Real cockfighting is illegal in India
+      under the Prevention of Cruelty to Animals Act, 1960, and in most markets. Nothing here is instructional.</p>
+      <div class="hr"></div>
+      <div class="mono" style="font-size:10.5px;line-height:2;color:var(--bone-3)">
+        <div>Combat tick · 60 Hz fixed, render interpolated</div>
+        <div>Hitstop · 45 + 4.5 × damage ms, clamped to 300</div>
+        <div>Condition output · (food)^.35 × (water)^.30 × (rest)^.35</div>
+        <div>Feathers · cosmetic by rule, never in a hitbox</div>
+        <div>Controls · ← → walk · ↑ ↓ sidestep · J peck · K wing · L talon · U spur · Space guard · O clinch · I surge</div>
+        <div>Gamepad · A/X peck · B/Y wing · X/B talon · LB guard · RB spur</div>
+      </div>
+      <div class="hr"></div>
+      <p style="font-size:11px;line-height:1.7;color:var(--bone-3)">
+      One product, one price. No ads, no timers, no loot boxes, no currency that can be bought with money.
+      Coin is earned only from bouts and story beats.</p>`;
+    show('mCredits');
+  },
+};
+
+/* ---------------------------------------------------------------------------
+   7. HELPERS, INPUT, COOP ACTIONS, BOOT
+   ------------------------------------------------------------------------ */
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function setMeter(sel,v){
+  const e=$(sel); if(!e) return;
+  e.style.right=(100-clamp(v,0,100))+'%';
+}
+
+function makeOpponent(arenaN){
+  const a=ARENAS[arenaN-1];
+  let pool=BREEDS.slice();
+  if(arenaN>=3) pool=pool.filter(b=>b.cls!=='Bantam');
+  if(arenaN>=5) pool=pool.filter(b=>b.cls==='Heavy'||b.cls==='Medium');
+  const br=pick(pool.length?pool:BREEDS);
+  const stage=clamp(3+Math.floor(arenaN*0.5),3,6);
+  const loadout=[];
+  if(arenaN>=3) loadout.push(pick(ADDONS).id);
+  if(arenaN>=5 && Math.random()<0.6) loadout.push(pick(ADDONS).id);
+  return {
+    uid:'o'+Date.now(), name:pick(NAMES_A)+' '+pick(['the Quarry','of the Board','Nine','Second','of Kutch','Dust','the Long Spur']),
+    breedId:br.id, breed:br, stage,
+    food:ri(88,100), water:ri(86,100), rest:ri(80,100),
+    trains:{pow:ri(0,arenaN>3?2:1),rea:0,agi:0,con:0},
+    loadout, score:120+arenaN*170+ri(0,90), fights:arenaN*3, wins:arenaN*2
+  };
+}
+
+/* ---------- coop actions ---------- */
+function feedBird(){
+  const b=curBird(); if(!b) return;
+  if(S.feed<1) return toast('The silo is empty — buy feed');
+  if(b.food>=100) return toast('Already full on feed');
+  S.feed--; b.food=Math.min(100,b.food+14); b.feed+=1;
+  if(canEvolve(b)){ b.stage++; toast(b.name+' grew — now '+STAGES[b.stage].n); sfx('surge'); }
+  else { sfx('ui'); }
+  save(); UI.renderCoop();
+}
+function waterBird(){
+  const b=curBird(); if(!b) return;
+  if(S.water<1) return toast('The tank is empty — buy water');
+  if(b.water>=100) return toast('Already watered');
+  S.water--; b.water=Math.min(100,b.water+16);
+  sfx('ui'); save(); UI.renderCoop();
+}
+function restBird(){
+  const b=curBird(); if(!b) return;
+  if(b.rest>=100) return toast('Already rested');
+  const gain=12+S.stations.pens*0.6;
+  b.rest=Math.min(100,b.rest+gain);
+  // resting also recovers a little food and water, Table 7
+  b.food=Math.min(100,b.food+2); b.water=Math.min(100,b.water+2);
+  sfx('ui'); save(); UI.renderCoop();
+  toast('Rested +'+Math.round(gain)+' — pen '+S.stations.pens);
+}
+function medBay(){
+  const b=curBird(); if(!b) return;
+  if(!S.stations.med) return toast('Build the med bay first');
+  if(S.coin<60) return toast('Treatment costs 60 coin');
+  S.coin-=60;
+  b.food=Math.min(100,b.food+6); b.water=Math.min(100,b.water+6); b.rest=Math.min(100,b.rest+30);
+  sfx('ui'); save(); UI.renderCoop(); toast('Treated · rest +30');
+}
+function openTrain(){
+  const b=curBird(); if(!b) return;
+  if(!S.stations.yard) return toast('Build the training yard first');
+  if(S.coin<25||S.feed<5) return toast('Training costs 25 coin and 5 feed');
+  const st=breedStats(b);
+  const stats=[['pow','Power',st.pow],['rea','Reach',st.rea],['agi','Agility',st.agi],['con','Constitution',st.con]];
+  $('#hatchTitle').textContent='Training yard';
+  $('#hatchBody').innerHTML=`
+    <p style="font-size:11.5px;color:var(--bone-3);line-height:1.6;margin-top:0">
+    25 coin and 5 feed units per session. ${S.stations.yard>1?'Two slots open this cycle.':'One slot per cycle.'}
+    Training above +3 on a stat is wasted on a young bird.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      ${stats.map(([k,n,v])=>`<button class="btn" data-train="${k}" style="justify-content:space-between">
+        <span>${n}</span><span class="mono" style="color:var(--amber)">${v} → ${v+1}</span></button>`).join('')}
+    </div>`;
+  show('mHatch');
+  $$('[data-train]').forEach(btn=>on(btn,'click',()=>{
+    const k=btn.dataset.train;
+    if(S.coin<25||S.feed<5) return toast('Not enough coin or feed');
+    if((b.trains[k]||0)>=3) return toast('That stat is trained out');
+    S.coin-=25; S.feed-=5; b.trains[k]=(b.trains[k]||0)+1;
+    hide('mHatch'); sfx('ui'); save(); UI.renderCoop();
+    toast(btn.querySelector('span').textContent+' +1');
+  }));
+}
+
+/* ---------- input ---------- */
+const KEYMAP={
+  ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right',
+  ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down',
+  KeyJ:'peck', KeyK:'wing', KeyL:'talon', KeyU:'spur', KeyO:'clinch', KeyH:'clinch',
+  Space:'guard', KeyI:'surge', ShiftLeft:'surge'
+};
+const HELD={};
+
+function bindInput(){
+  on(window,'keydown',e=>{
+    if(e.repeat) return;
+    const a=KEYMAP[e.code];
+    if(!a) return;
+    if(['left','right','up','down','guard'].indexOf(a)>=0){
+      if(a==='guard'){ IN.guard=true; HELD.guard=true; }
+      if(a==='left') IN.left=true;
+      if(a==='right') IN.right=true;
+      if(a==='up') IN.up=true;
+      if(a==='down') IN.down=true;
+      e.preventDefault(); return;
+    }
+    if(UI.screen==='bout'&&(F.phase==='fight'||F.phase==='intro')){
+      press(a); e.preventDefault();
+    }
+    if(e.code==='Escape'&&UI.screen==='bout'){ togglePause(); }
+  });
+  on(window,'keyup',e=>{
+    const a=KEYMAP[e.code]; if(!a) return;
+    if(a==='left') IN.left=false;
+    if(a==='right') IN.right=false;
+    if(a==='up') IN.up=false;
+    if(a==='down') IN.down=false;
+    if(a==='guard'){ IN.guard=false; HELD.guard=false; }
+  });
+
+  // touch cluster
+  $$('#touch .tbtn').forEach(b=>{
+    const act=b.dataset.act;
+    const down=ev=>{
+      ev.preventDefault();
+      b.classList.add('hit');
+      if(act==='left') IN.left=true;
+      else if(act==='right') IN.right=true;
+      else if(act==='guard'){ IN.guard=true; }
+      else press(act);
+      if(navigator.vibrate) navigator.vibrate(8);
+    };
+    const up=ev=>{
+      ev.preventDefault();
+      b.classList.remove('hit');
+      if(act==='left') IN.left=false;
+      else if(act==='right') IN.right=false;
+      else if(act==='guard') IN.guard=false;
+    };
+    on(b,'pointerdown',down); on(b,'pointerup',up); on(b,'pointercancel',up); on(b,'pointerleave',up);
+  });
+
+  // gamepad poll
+  if(navigator.getGamepads){
+    setInterval(()=>{
+      if(UI.screen!=='bout'||F.paused) return;
+      const pads=navigator.getGamepads(); let gp=null;
+      for(const p of pads){ if(p&&p.connected){ gp=p; break; } }
+      if(!gp) return;
+      const ax=gp.axes[0]||0, ay=gp.axes[1]||0;
+      IN.left=ax<-0.35||gp.buttons[14]&&gp.buttons[14].pressed;
+      IN.right=ax>0.35||gp.buttons[15]&&gp.buttons[15].pressed;
+      IN.guard=!!(gp.buttons[4]&&gp.buttons[4].pressed);
+      const btn=i=>gp.buttons[i]&&gp.buttons[i].pressed;
+      const edge=(i,key)=>{
+        if(btn(i)&&!HELD[key]){ HELD[key]=true; press(key); }
+        else if(!btn(i)) HELD[key]=false;
+      };
+      edge(0,'peck'); edge(1,'wing'); edge(2,'talon'); edge(5,'spur'); edge(6,'clinch'); edge(7,'surge');
+      if(ay<-0.5&&!HELD.ayup){ HELD.ayup=true; IN.up=true; press('sidestep'); }
+      if(ay>0.5&&!HELD.aydn){ HELD.aydn=true; IN.down=true; press('sidestep'); }
+      if(Math.abs(ay)<0.3){ HELD.ayup=false; HELD.aydn=false; IN.up=IN.down=false; }
+    },16);
+  }
+}
+
+function togglePause(){
+  if(!F.on) return;
+  F.paused=!F.paused;
+  if(F.paused){ show('mPause'); } else { hide('mPause'); F.last=0; }
+}
+
+/* ---------- bind everything ---------- */
+function bindUI(){
+  // title
+  on($('#btnContinue'),'click',()=>{ sfx('ui'); UI.go('coop'); });
+  on($('#btnNew'),'click',()=>{
+    if(S.birds.length && !confirm('Start a new circuit? The current coop is erased.')) return;
+    S=freshState(); ensureStarter(); save(); sfx('ui'); UI.go('coop');
+  });
+  on($('#btnSettingsTitle'),'click',()=>UI.settings());
+  on($('#btnCredits'),'click',()=>UI.credits());
+  on($('#btnSettingsCoop'),'click',()=>UI.settings());
+  on($('#btnRoster'),'click',()=>UI.go('roster'));
+  on($('#btnCircuit'),'click',()=>UI.go('circuit'));
+  on($('#btnBackRoster'),'click',()=>UI.go('coop'));
+  on($('#btnBackCircuit'),'click',()=>UI.go('coop'));
+  on($('#btnNotes'),'click',()=>UI.notes());
+  on($('#btnBackPrefight'),'click',()=>UI.go('circuit'));
+  on($('#btnToCircuit'),'click',()=>UI.go('circuit'));
+
+  // coop actions
+  on($('#btnFeed'),'click',feedBird);
+  on($('#btnWater'),'click',waterBird);
+  on($('#btnRest'),'click',restBird);
+  on($('#btnMed'),'click',medBay);
+  on($('#btnTrain'),'click',openTrain);
+
+  // pre-fight
+  on($('#btnToggleRank'),'click',()=>{
+    S.ranked=!S.ranked; UI.renderPrefight(); sfx('ui'); save();
+  });
+  on($('#btnFightNow'),'click',()=>{
+    const b=curBird(); if(!b) return;
+    if(b.food<15||b.water<15||b.rest<15){
+      if(!confirm('This bird is in poor condition. Walk it out anyway?')) return;
+    }
+    sfx('ui');
+    UI.go('bout');
+    setTimeout(()=>{
+      R.resizeBout();
+      startBout(b, UI.opp, UI.pendingArena-1, {ranked:S.ranked && !S.opts.assist});
+    },40);
+  });
+
+  // bout
+  on($('#btnPause'),'click',togglePause);
+  on($('#btnResume'),'click',togglePause);
+  on($('#btnPauseSettings'),'click',()=>{ hide('mPause'); UI.settings(); });
+  on($('#btnForfeit'),'click',()=>{
+    hide('mPause'); F.on=false; F.paused=false; loopStop();
+    toast('Bout forfeited — nothing lost, nothing gained');
+    UI.go('coop');
+  });
+  on($('#btnCullAck'),'click',()=>UI.cullAck());
+
+  // resolve
+  on($('#btnRsCoop'),'click',()=>{ F.on=false; loopStop(); UI.go('coop'); });
+  on($('#btnRsAgain'),'click',()=>{
+    F.on=false; loopStop();
+    UI.opp=makeOpponent(UI.pendingArena);
+    UI.go('prefight');
+  });
+
+  // modals
+  $$('[data-close]').forEach(b=>on(b,'click',()=>hide(b.dataset.close)));
+  $$('.modal').forEach(m=>on(m,'click',e=>{ if(e.target===m) m.classList.remove('on'); }));
+  on($('#btnWipe'),'click',()=>{
+    if(!confirm('Erase the circuit? Every bird, every note, every win.')) return;
+    localStorage.removeItem(SAVE_KEY);
+    S=freshState(); ensureStarter(); save();
+    hide('mSettings'); UI.go('title'); toast('Circuit erased');
+  });
+
+  // resize
+  let rt=0;
+  on(window,'resize',()=>{
+    clearTimeout(rt);
+    rt=setTimeout(()=>{
+      R.resizeBout(); R.resizeTitle(); checkOrient();
+    },120);
+  });
+  on(window,'orientationchange',()=>setTimeout(()=>{ R.resizeBout(); R.resizeTitle(); checkOrient(); },250));
+  document.addEventListener('visibilitychange',()=>{ if(document.hidden&&F.on&&!F.paused) togglePause(); });
+}
+
+function isTouch(){
+  return ('ontouchstart' in window)||(navigator.maxTouchPoints||0)>0;
+}
+function checkOrient(){
+  const need = UI.screen==='bout' && window.innerHeight>window.innerWidth && window.innerWidth<760;
+  $('#rotate').classList.toggle('on',need);
+}
+
+/* ---------- boot ---------- */
+function boot(){
+  const saved=load();
+  S=saved||freshState();
+  if(!saved) ensureStarter();
+  document.body.classList.toggle('rm',S.opts.rm);
+
+  R.initBout();
+  R.initTitle();
+  bindInput();
+  bindUI();
+  if(isTouch()&&S.opts.touch!==false){ $('#touch').classList.add('on'); }
+  UI.go('title');
+  UI.renderTitleMeta();
+  checkOrient();
+  // first tap unlocks audio on mobile
+  on(window,'pointerdown',()=>{ try{ if(!AC) AC=new (window.AudioContext||window.webkitAudioContext)(); if(AC.state==='suspended') AC.resume(); }catch(e){} },{once:true});
+}
+
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot);
+else boot();
+
+// expose a little for debugging / kiosk mode
+window.GALLUS={get state(){return S;},F,UI,R,startBout,makeOpponent,simTick,press,setState:(n)=>S=n};
+})();
+</script>
+</body>
+</html>
